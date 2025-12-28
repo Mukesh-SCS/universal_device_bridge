@@ -1,0 +1,8 @@
+{
+  "name": "@udb/daemon-linux",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@udb/protocol": "0.1.0"
+  }
+}

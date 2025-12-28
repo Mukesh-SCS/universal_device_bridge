@@ -1,0 +1,9 @@
+{
+  "name": "udb-root",
+  "private": true,
+  "workspaces": [
+    "protocol",
+    "cli",
+    "daemon/linux"
+  ]
+}
