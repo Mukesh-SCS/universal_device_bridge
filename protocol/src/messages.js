@@ -22,7 +22,11 @@ export const MSG = {
   PULL_BEGIN: "pull_begin",
   PULL_CHUNK: "pull_chunk",
   PULL_END: "pull_end",
-  ERROR: "error"
+  ERROR: "error",
+  STATUS: "status",
+  STATUS_RESULT: "status_result",
+  LIST_PAIRED: "list_paired",
+  LIST_PAIRED_RESULT: "list_paired_result"
 };
 
 export function hello({ clientName, pubKey }) {

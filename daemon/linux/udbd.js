@@ -26,6 +26,13 @@ const DEVICE_NAME = getArg("--name", os.hostname());
 
 // Security knobs
 const NO_EXEC = hasFlag("--no-exec");
+function listPaired() {
+  return Object.entries(auth.keys).map(([fp, v]) => ({
+    fp,
+    name: v.name,
+    addedAt: v.addedAt
+  }));
+}
 const RESET_AUTH = hasFlag("--reset-auth");
 
 // Root directory for file operations (push/pull)
@@ -243,6 +250,29 @@ const server = net.createServer((socket) => {
         socket.write(encodeFrame({ type: MSG.AUTH_REQUIRED, reason: "session_not_authenticated" }));
         return;
       }
+
+        if (m.type === MSG.STATUS) {
+          socket.write(
+            encodeFrame({
+              type: MSG.STATUS_RESULT,
+              deviceName: DEVICE_NAME,
+              execEnabled: !NO_EXEC,
+              pairingMode: PAIRING,
+              pairedCount: Object.keys(auth.keys).length
+            })
+          );
+          return;
+        }
+
+        if (m.type === MSG.LIST_PAIRED) {
+          socket.write(
+            encodeFrame({
+              type: MSG.LIST_PAIRED_RESULT,
+              devices: listPaired()
+            })
+          );
+          return;
+        }
 
         if (m.type === MSG.UNPAIR_REQUEST) {
             if (!clientPubKey) {

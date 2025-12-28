@@ -38,12 +38,15 @@ function parseTarget(t) {
 
 /* ===================== TCP helper ===================== */
 
-async function tcpRequest(target, messages, { onStream, keepOpen = false } = {}) {
+async function tcpRequest(
+  target,
+  messages,
+  { onStream, keepOpen = false, preAuth = false } = {}
+) {
   const { publicKeyPem } = loadOrCreateClientKeypair();
 
   return new Promise((resolve, reject) => {
     const sock = net.createConnection(target);
-    let authed = false;
     let sent = false;
 
     const sendQueued = () => {
@@ -67,7 +70,6 @@ async function tcpRequest(target, messages, { onStream, keepOpen = false } = {})
       }
 
       if (m.type === MSG.AUTH_OK) {
-        authed = true;
         sendQueued();
         return;
       }
@@ -77,6 +79,8 @@ async function tcpRequest(target, messages, { onStream, keepOpen = false } = {})
         m.type === MSG.PAIR_OK ||
         m.type === MSG.PAIR_DENIED ||
         m.type === MSG.UNPAIR_OK ||
+        m.type === MSG.STATUS_RESULT ||
+        m.type === MSG.LIST_PAIRED_RESULT ||
         m.type === MSG.AUTH_REQUIRED ||
         m.type === MSG.AUTH_FAIL ||
         m.type === MSG.ERROR
@@ -94,6 +98,11 @@ async function tcpRequest(target, messages, { onStream, keepOpen = false } = {})
           pubKey: publicKeyPem
         })
       );
+
+      // Pairing must be sent BEFORE auth completes
+      if (preAuth) {
+        sendQueued();
+      }
     });
 
     sock.on("data", decoder);
@@ -102,7 +111,44 @@ async function tcpRequest(target, messages, { onStream, keepOpen = false } = {})
 }
 
 
+
 /* ===================== commands ===================== */
+async function statusCmd() {
+  const target = parseTarget(rest[0]);
+  const res = await tcpRequest(target, [{ type: MSG.STATUS }]);
+  if (res.msg?.type === MSG.STATUS_RESULT) {
+    console.log(`Device: ${res.msg.deviceName}`);
+    console.log(`Pairing mode: ${res.msg.pairingMode}`);
+    console.log(`Exec enabled: ${res.msg.execEnabled}`);
+    console.log(`Paired clients: ${res.msg.pairedCount}`);
+    return;
+  }
+  if (res.msg?.type === MSG.AUTH_REQUIRED) {
+    die("Not authorized. Run: udb pair <ip>:<port>");
+  }
+  if (res.msg?.type === MSG.ERROR) die(res.msg.error);
+  console.log(res.msg);
+}
+
+async function listPairedCmd() {
+  const target = parseTarget(rest[0]);
+  const res = await tcpRequest(target, [{ type: MSG.LIST_PAIRED }]);
+  if (res.msg?.type === MSG.LIST_PAIRED_RESULT) {
+    if (!res.msg.devices.length) {
+      console.log("No paired clients.");
+      return;
+    }
+    for (const d of res.msg.devices) {
+      console.log(`${d.fp}  name=${d.name}  added=${d.addedAt}`);
+    }
+    return;
+  }
+  if (res.msg?.type === MSG.AUTH_REQUIRED) {
+    die("Not authorized. Run: udb pair <ip>:<port>");
+  }
+  if (res.msg?.type === MSG.ERROR) die(res.msg.error);
+  console.log(res.msg);
+}
 
 async function devices() {
   const sock = dgram.createSocket("udp4");
@@ -133,7 +179,12 @@ async function pair() {
   const { publicKeyPem } = loadOrCreateClientKeypair();
   const fp = fingerprintPublicKeyPem(publicKeyPem);
 
-  const res = await tcpRequest(target, [{ type: MSG.PAIR_REQUEST }]);
+  const res = await tcpRequest(
+  target,
+  [{ type: MSG.PAIR_REQUEST }],
+  { preAuth: true }
+);
+
 
   if (res.msg?.type === MSG.PAIR_OK) {
     console.log(`Paired OK fp=${fp}`);
@@ -204,6 +255,8 @@ async function main() {
   if (cmd === "pair") return pair();
   if (cmd === "unpair") return unpair();
   if (cmd === "exec") return execCmd();
+  if (cmd === "status") return statusCmd();
+  if (cmd === "list-paired") return listPairedCmd();
 
   console.log(`Usage:
   node cli/src/udb.js devices
@@ -212,6 +265,8 @@ async function main() {
   node cli/src/udb.js unpair <ip>:<port>
   node cli/src/udb.js unpair <ip>:<port> --fp <fingerprint>
   node cli/src/udb.js unpair <ip>:<port> --all
+  node cli/src/udb.js status <ip>:<port>
+  node cli/src/udb.js list-paired <ip>:<port>
 `);
 }
 
