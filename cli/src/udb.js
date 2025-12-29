@@ -7,11 +7,7 @@ import net from "node:net";
 
 import { encodeFrame, createFrameDecoder } from "@udb/protocol/src/framing.js";
 import { MSG } from "@udb/protocol/src/messages.js";
-import {
-  loadOrCreateClientKeypair,
-  fingerprintPublicKeyPem,
-  signNonce
-} from "@udb/protocol/src/crypto.js";
+import { loadOrCreateClientKeypair,fingerprintPublicKeyPem,signNonce} from "@udb/protocol/src/crypto.js";
 
 
 
@@ -26,6 +22,8 @@ const CONFIG_FILE = path.join(os.homedir(), ".udb", "config.json");
 
 
 /* ===================== helpers ===================== */
+
+// Discover devices via UDP broadcast
 async function discoverOnce(timeoutMs = 1200) {
   return new Promise((resolve) => {
     const sock = dgram.createSocket("udp4");
@@ -61,29 +59,44 @@ async function discoverOnce(timeoutMs = 1200) {
   });
 }
 
+// Resolve target from argument or discovery or last used target 
 async function resolveTarget(maybeTarget) {
+  // 1) Explicit target always wins
   if (maybeTarget) {
     return parseTarget(maybeTarget);
   }
 
-  const devices = await discoverOnce();
+  // 2) Current context
+  const currentName = getCurrentContextName();
+  if (currentName) {
+    const ctx = getContextByName(currentName);
+    if (ctx) {
+      return { host: ctx.host, port: ctx.port };
+    }
+  }
 
-  if (devices.length === 0) {
+  // 3) Last-used target
   const last = loadLastTarget();
   if (last) {
     return last;
   }
-  die("No devices found");
+
+  // 4) Discovery (best-effort)
+  const devices = await discoverOnce();
+
+  if (devices.length === 0) {
+    die("No devices found");
   }
 
-
   if (devices.length > 1) {
-    die("Multiple devices found. Run: udb devices");
+    die("Multiple devices found. Use `udb context use <name>` or specify ip:port");
   }
 
   return devices[0];
 }
 
+
+// Save/load last used target
 function saveLastTarget(target) {
   fs.mkdirSync(path.dirname(CONFIG_FILE), { recursive: true });
   fs.writeFileSync(
@@ -92,6 +105,7 @@ function saveLastTarget(target) {
   );
 }
 
+// Load last used target
 function loadLastTarget() {
   try {
     return JSON.parse(fs.readFileSync(CONFIG_FILE)).lastTarget;
@@ -100,6 +114,7 @@ function loadLastTarget() {
   }
 }
 
+// Read/write config
 function readConfig() {
   try {
     return JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
@@ -108,26 +123,30 @@ function readConfig() {
   }
 }
 
+// Write config
 function writeConfig(cfg) {
   fs.mkdirSync(path.dirname(CONFIG_FILE), { recursive: true });
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
 }
 
-
+// Exit with error
 function die(msg) {
   console.error(msg);
   process.exit(1);
 }
 
+// Command line flag helpers
 function hasFlag(name) {
   return rest.includes(name);
 }
 
+// Get value for flag
 function getFlagValue(name) {
   const i = rest.indexOf(name);
   return i !== -1 ? rest[i + 1] : undefined;
 }
 
+// Parse target from string
 function parseTarget(t) {
   const [host, portStr] = String(t || "").split(":");
   const port = Number(portStr || "9910");
@@ -135,6 +154,8 @@ function parseTarget(t) {
   return { host, port };
 }
 
+
+// Check if process is running
 function isRunning(pid) {
   try {
     process.kill(pid, 0);
@@ -144,8 +165,43 @@ function isRunning(pid) {
   }
 }
 
+// Get all contexts
+function getContexts() {
+  const cfg = readConfig();
+  return cfg.contexts || {};
+}
+
+// Get current context name
+function getCurrentContextName() {
+  const cfg = readConfig();
+  return cfg.currentContext || null;
+}
+
+// Set current context name
+function setCurrentContext(name) {
+  const cfg = readConfig();
+  cfg.currentContext = name;
+  writeConfig(cfg);
+}
+
+// Add context
+function addContext(name, target) {
+  const cfg = readConfig();
+  cfg.contexts = cfg.contexts || {};
+  cfg.contexts[name] = target;
+  writeConfig(cfg);
+}
+
+// Get context by name
+function getContextByName(name) {
+  const contexts = getContexts();
+  return contexts[name] || null;
+}
+
+
 /* ===================== TCP helper ===================== */
 
+// TCP request with optional streaming handler
 async function tcpRequest(
   target,
   messages,
@@ -181,7 +237,7 @@ async function tcpRequest(
         sendQueued();
         return;
       }
-
+      // Final responses
       if (
         m.type === MSG.EXEC_RESULT ||
         m.type === MSG.PAIR_OK ||
@@ -198,6 +254,7 @@ async function tcpRequest(
       }
     });
 
+    // On connect, send HELLO
     sock.on("connect", () => {
       sock.write(
         encodeFrame({
@@ -278,6 +335,7 @@ async function daemonStatus() {
 
 
 /* ===================== commands ===================== */
+// status command
 async function statusCmd() {
   let targetArg = undefined;
 
@@ -321,6 +379,7 @@ async function statusCmd() {
   }
 }
 
+// list-paired command
 async function listPairedCmd() {
   const  target = await resolveTarget(rest[0]);
   const res = await tcpRequest(target, [{ type: MSG.LIST_PAIRED }]);
@@ -341,10 +400,12 @@ async function listPairedCmd() {
   console.log(res.msg);
 }
 
+// devices command
 async function devices() {
   const sock = dgram.createSocket("udp4");
   const found = new Map();
 
+  // --- UDP DISCOVERY ---
   sock.bind(0, () => {
     sock.setBroadcast(true);
     sock.send(Buffer.from("UDB_DISCOVER_V1"), 9909, "255.255.255.255");
@@ -359,31 +420,71 @@ async function devices() {
         found.set(key, {
           host: rinfo.address,
           port: j.tcpPort,
-          name: j.name
+          name: j.name,
+          source: "udp",
+          context: null
         });
       }
     } catch {}
   });
 
+  // --- AFTER DISCOVERY WINDOW ---
   setTimeout(() => {
     sock.close();
 
+    // --- MERGE CONTEXTS ---
+    const contexts = getContexts();
+
+    for (const [ctxName, ctx] of Object.entries(contexts)) {
+      const key = `${ctx.host}:${ctx.port}`;
+
+      if (found.has(key)) {
+        // UDP device that matches a context → annotate
+        const d = found.get(key);
+        d.context = ctxName;
+      } else {
+        // Context-only device (UDP failed)
+        found.set(key, {
+          host: ctx.host,
+          port: ctx.port,
+          name: ctx.name || "",
+          source: "context",
+          context: ctxName
+        });
+      }
+    }
+
     const devices = [...found.values()];
 
-    // 🔹 JSON MODE
+    // --- JSON MODE ---
     if (json) {
-      console.log(JSON.stringify(devices, null, 2));
+      console.log(
+        JSON.stringify(
+          devices.map(d => ({
+            host: d.host,
+            port: d.port,
+            name: d.name,
+            source: d.source,
+            context: d.context
+          })),
+          null,
+          2
+        )
+      );
       return;
     }
 
-    // 🔹 HUMAN MODE (existing behavior)
+    // --- HUMAN MODE ---
     for (const d of devices) {
-      console.log(`${d.host}:${d.port}  name=${d.name}`);
+      const ctxInfo = d.context ? `  [context: ${d.context}]` : "";
+      console.log(`${d.host}:${d.port}  name=${d.name}${ctxInfo}`);
     }
+
   }, 1200);
 }
 
 
+// pair command
 async function pair() {
   const  target = await resolveTarget(rest[0]);
   const { publicKeyPem } = loadOrCreateClientKeypair();
@@ -407,6 +508,7 @@ async function pair() {
   console.log(res.msg);
 }
 
+// unpair command
 async function unpair() {
   const  target = await resolveTarget(rest[0]);
 
@@ -441,6 +543,7 @@ async function unpair() {
   console.log(res.msg);
 }
 
+// exec command
 async function execCmd() {
   let targetArg;
   let command;
@@ -482,6 +585,7 @@ async function execCmd() {
   }
 }
 
+// config show command
 async function configShowCmd() {
   const cfg = readConfig();
 
@@ -500,6 +604,9 @@ async function configShowCmd() {
   console.log(`Last target: ${last.host}:${last.port}` + (last.name ? `  name=${last.name}` : ""));
 }
 
+
+
+// connect command
 async function connectCmd() {
   if (!rest[0]) {
     die("Usage: connect <ip:port | name>");
@@ -588,6 +695,137 @@ async function connectCmd() {
 }
 
 
+// context list command
+async function contextListCmd() {
+  const contexts = getContexts();
+  const current = getCurrentContextName();
+
+  const rows = Object.entries(contexts).map(([name, ctx]) => ({
+    name,
+    host: ctx.host,
+    port: ctx.port,
+    device: ctx.name || "",
+    current: name === current
+  }));
+
+  if (json) {
+    console.log(JSON.stringify(rows, null, 2));
+    return;
+  }
+
+  if (rows.length === 0) {
+    console.log("No contexts defined.");
+    console.log('Use: udb context add <name> <ip:port>');
+    return;
+  }
+
+  for (const r of rows) {
+    const mark = r.current ? "*" : " ";
+    console.log(
+      `${mark} ${r.name.padEnd(12)} ${r.host}:${r.port}  ${r.device}`
+    );
+  }
+}
+
+// context add command
+async function contextAddCmd() {
+  if (rest.length < 3) {
+    die("Usage: context add <name> <ip:port | device-name>");
+  }
+
+  const ctxName = rest[1];
+  const arg = rest[2];
+
+  let target;
+
+  // Case 1: explicit ip:port
+  if (arg.includes(":")) {
+    target = parseTarget(arg);
+  } else {
+    // Case 2: device name (best-effort discovery)
+    const devices = await discoverOnce();
+    if (devices.length === 0) {
+      die("No devices found (discovery unavailable)");
+    }
+
+    const matches = devices.filter(d => d.name === arg);
+    if (matches.length === 0) {
+      die(`No device named "${arg}"`);
+    }
+    if (matches.length > 1) {
+      die(`Multiple devices named "${arg}". Use ip:port.`);
+    }
+
+    target = matches[0];
+  }
+
+  // Validate by status
+  const res = await tcpRequest(target, [{ type: MSG.STATUS }]);
+
+  if (res.msg?.type === MSG.STATUS_RESULT) {
+    addContext(ctxName, {
+      host: target.host,
+      port: target.port,
+      name: res.msg.deviceName
+    });
+
+    console.log(
+      `Context "${ctxName}" added → ${target.host}:${target.port}  name=${res.msg.deviceName}`
+    );
+    return;
+  }
+
+  if (res.msg?.type === MSG.AUTH_REQUIRED) {
+    die("Not authorized. Run: udb pair <ip:port>");
+  }
+
+  if (res.msg?.type === MSG.ERROR) {
+    die(res.msg.error);
+  }
+
+  die("Failed to add context");
+}
+
+// context use command
+async function contextUseCmd() {
+  if (!rest[1]) {
+    die("Usage: context use <name>");
+  }
+
+  const name = rest[1];
+  const ctx = getContextByName(name);
+
+  if (!ctx) {
+    die(`No such context "${name}"`);
+  }
+
+  // Validate target is reachable
+  const res = await tcpRequest(
+    { host: ctx.host, port: ctx.port },
+    [{ type: MSG.STATUS }]
+  );
+
+  if (res.msg?.type === MSG.STATUS_RESULT) {
+    setCurrentContext(name);
+
+    console.log(
+      `Using context "${name}" → ${ctx.host}:${ctx.port}  name=${res.msg.deviceName}`
+    );
+    return;
+  }
+
+  if (res.msg?.type === MSG.AUTH_REQUIRED) {
+    die("Not authorized. Run: udb pair <ip:port>");
+  }
+
+  if (res.msg?.type === MSG.ERROR) {
+    die(res.msg.error);
+  }
+
+  die("Failed to switch context");
+}
+
+
 /* ===================== main ===================== */
 
 async function main() {
@@ -602,6 +840,9 @@ async function main() {
   if (cmd === "daemon" && rest[0] === "status") return daemonStatus();
   if (cmd === "config" && rest[0] === "show") return configShowCmd();
   if (cmd === "connect") return connectCmd();
+  if (cmd === "context" && rest[0] === "list") return contextListCmd();
+  if (cmd === "context" && rest[0] === "add") return contextAddCmd();
+  if (cmd === "context" && rest[0] === "use") return contextUseCmd();
 
   console.log(`Usage:
   node cli/src/udb.js devices
@@ -615,6 +856,10 @@ async function main() {
   node cli/src/udb.js daemon start|stop|status
   node cli/src/udb.js config show [--json]
   node cli/src/udb.js connect <ip>:<port>
+  node cli/src/udb.js connect <name>
+  node cli/src/udb.js context list [--json]
+  node cli/src/udb.js context add <name> <ip>:<port> | <device-name>
+  node cli/src/udb.js context use <name>
 `);
 }
 
