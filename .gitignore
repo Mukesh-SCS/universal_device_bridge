@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+
+# User-specific directories (created at runtime in home directory, but ignore if somehow in repo)
+.udb/
+.udbd/
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Debug files
+*.pdb
+*.idb
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+

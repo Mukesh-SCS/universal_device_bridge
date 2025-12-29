@@ -1,0 +1,11 @@
+{
+  "name": "@udb/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "udb": "src/udb.js"
+  },
+  "dependencies": {
+    "@udb/protocol": "0.1.0"
+  }
+}
