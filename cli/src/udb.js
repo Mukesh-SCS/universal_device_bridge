@@ -147,12 +147,23 @@ function getFlagValue(name) {
 }
 
 // Parse target from string
-function parseTarget(t) {
-  const [host, portStr] = String(t || "").split(":");
-  const port = Number(portStr || "9910");
-  if (!host) die("target required: <ip>:<port>");
-  return { host, port };
+function parseTarget(arg) {
+  // URL target
+  const urlTarget = parseUrlTarget(arg);
+  if (urlTarget) return urlTarget;
+
+  // ip:port (existing behavior)
+  const [host, port] = arg.split(":");
+  if (!host || !port) {
+    die("Invalid target. Use ip:port or tcp://host:port");
+  }
+
+  return {
+    host,
+    port: Number(port)
+  };
 }
+
 
 
 // Check if process is running
@@ -274,6 +285,45 @@ async function tcpRequest(
     sock.on("error", reject);
   });
 }
+
+// TCP port probe
+function probeTcp(host, port, timeoutMs = 400) {
+  return new Promise((resolve) => {
+    const sock = new net.Socket();
+    let done = false;
+
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      sock.destroy();
+      resolve(ok);
+    };
+
+    sock.setTimeout(timeoutMs);
+    sock.once("connect", () => finish(true));
+    sock.once("timeout", () => finish(false));
+    sock.once("error", () => finish(false));
+
+    sock.connect(port, host);
+  });
+}
+
+// Parse tcp://host:port URL
+function parseUrlTarget(arg) {
+  if (!arg.startsWith("tcp://")) return null;
+
+  const u = new URL(arg);
+  if (!u.hostname || !u.port) {
+    die("Invalid tcp URL. Use: tcp://host:port");
+  }
+
+  return {
+    host: u.hostname,
+    port: Number(u.port)
+  };
+}
+
+
 
 /* ===================== daemon Start ===================== */
 async function daemonStart() {
@@ -401,6 +451,7 @@ async function listPairedCmd() {
 }
 
 // devices command
+// devices command
 async function devices() {
   const sock = dgram.createSocket("udp4");
   const found = new Map();
@@ -429,7 +480,7 @@ async function devices() {
   });
 
   // --- AFTER DISCOVERY WINDOW ---
-  setTimeout(() => {
+  setTimeout(async () => {
     sock.close();
 
     // --- MERGE CONTEXTS ---
@@ -439,7 +490,7 @@ async function devices() {
       const key = `${ctx.host}:${ctx.port}`;
 
       if (found.has(key)) {
-        // UDP device that matches a context → annotate
+        // UDP-discovered device that matches a context
         const d = found.get(key);
         d.context = ctxName;
       } else {
@@ -454,7 +505,15 @@ async function devices() {
       }
     }
 
+    // --- BUILD FINAL DEVICE LIST ---
     const devices = [...found.values()];
+
+    // --- TCP REACHABILITY PROBE ---
+    await Promise.all(
+      devices.map(async (d) => {
+        d.online = await probeTcp(d.host, d.port);
+      })
+    );
 
     // --- JSON MODE ---
     if (json) {
@@ -465,7 +524,8 @@ async function devices() {
             port: d.port,
             name: d.name,
             source: d.source,
-            context: d.context
+            context: d.context,
+            online: d.online
           })),
           null,
           2
@@ -477,11 +537,13 @@ async function devices() {
     // --- HUMAN MODE ---
     for (const d of devices) {
       const ctxInfo = d.context ? `  [context: ${d.context}]` : "";
-      console.log(`${d.host}:${d.port}  name=${d.name}${ctxInfo}`);
+      const status = d.online ? "  [online]" : "  [offline]";
+      console.log(`${d.host}:${d.port}  name=${d.name}${ctxInfo}${status}`);
     }
 
   }, 1200);
 }
+
 
 
 // pair command

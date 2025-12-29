@@ -1,187 +1,237 @@
-# UDB — Universal Device Bridge
 
-UDB (Universal Device Bridge) is a **local-first, offline-capable device access tool** inspired by the architecture of Android Debug Bridge (ADB), but designed to work across **non-Android devices** such as Linux systems, embedded platforms, MCUs, simulators, and automotive ECUs.
+# Universal Device Bridge (UDB)
 
-UDB provides a **single, consistent developer interface** to discover devices, authenticate securely, execute commands, stream logs, and transfer files — without requiring the internet or cloud services.
+Universal Device Bridge (UDB) is a lightweight, secure, and scriptable system for discovering devices, pairing with them, and executing commands locally or remotely.
 
-UDB is an independent project and is not affiliated with Android or Google.
+UDB is designed to work reliably across:
+- local networks
+- Windows environments
+- restricted networks
+- cloud and CI systems
+
+It provides a deterministic CLI experience similar in philosophy to tools like `kubectl` and `adb`, but without relying on fragile assumptions.
 
 ---
 
-## Project Structure
+## Key Features
+
+- Device discovery (UDP fast path)
+- Context-based device management
+- Explicit remote targets (`tcp://`)
+- Secure pairing and authorization
+- Command execution
+- JSON output for automation
+- Windows-safe behavior (no dependency on UDP)
+
+---
+
+## Architecture Overview
+
+UDB consists of two main components:
+
+- **Daemon (`udbd`)**  
+  Runs on the target device and exposes a TCP control interface.
+
+- **CLI (`udb`)**  
+  Used by operators, scripts, and automation to discover, connect, and execute commands.
+
+Communication is authenticated and uses explicit pairing.
+
+---
+
+## Quick Start 
+
+### 1. Start the daemon (on the target machine)
 
 ```bash
-udb/
-│
-├── README.md
-│
-├── cli/                    # Host-side CLI (adb-style client)
-│   ├── src/
-│   └── package.json
-│
-├── protocol/               # Shared wire protocol (language-agnostic)
-│   ├── spec.md
-│   └── frames/
-│
-├── daemon/
-│   ├── linux/              # Linux / Embedded Linux daemon
-│   ├── mcu/                # Lightweight MCU daemon (C)
-│   ├── simulator/          # Simulator backend
-│
-├── transport/
-│   ├── usb/
-│   ├── tcp/
-│   └── abstract.ts
-│
-├── auth/
-│   ├── keypair/
-│   └── pairing/
-│
-├── examples/
-│   ├── linux-device/
-│   ├── mcu-device/
-│   └── simulator/
-│
-└── docs/
-    ├── architecture.md
-    └── roadmap.md
+node daemon/linux/udbd.js --pairing auto
 ```
 
----
-
-## Mission Goal
-
-**Build a universal device access bridge that is:**
-
-- Local-first
-- Offline-capable
-- Secure by default
-- Transport-agnostic
-- Cross-platform
-- Scriptable and automation-friendly
-
-Inspired by ADB’s architecture, without relying on Android internals.
-
----
-
-## Core Principles
-
-
-## Security Model (Important)
-
-UDB follows an **ADB-style trust model**:
-
-- Pairing grants a client persistent access until unpaired/reset.
-- Once paired, the client can authenticate using its private key.
-
-### What this means in practice
-- If `exec` is enabled on the device daemon, a paired client effectively has remote shell access.
-- File transfer is restricted to a sandbox directory by default to reduce damage from mistakes.
-
-### Linux daemon hardening options
-The Linux daemon (`udbd`) supports:
-
-- `--no-exec`  
-  Disables remote command execution.
-
-- `--root <dir>`  
-  Sets the sandbox directory used by `push`/`pull`.  
-  Default: `~/.udbd/files`
-
-- `--reset-auth`  
-  Clears all paired/authorized keys on daemon startup.
-
-Example:
-
-```bash
-node daemon/linux/udbd.js --no-exec --root /var/udbd-files --pairing prompt
-```
-
----
-
-## High-Level Architecture
-
-
-## High-Level Architecture
-
-UDB follows the same architectural pattern proven by ADB:
+Example output:
 
 ```
-Host CLI
-   |
-Unified Device Protocol
-   |
------------------------------
-|   |   |   |
-Linux MCU Simulator ECU
-Daemon Daemon Daemon Daemon
+UDBD listening TCP on :9910
 ```
 
-### Components
-
-- **Host CLI:**
-  - Device discovery
-  - Authentication and pairing
-  - Command execution
-  - File transfer
-  - Log streaming
-- **Device Daemon:**
-  - Runs on the target device
-  - Exposes a secure control endpoint
-  - Executes platform-specific handlers
-- **Protocol Layer:**
-  - Versioned
-  - Framed or binary
-  - Platform-neutral
-- **Transport Layer:**
-  - USB
-  - TCP (local LAN, private networks)
-  - Extensible to other transports
-
----
-
-## Supported / Target Devices
-
-**Initial v1 Targets:**
-- Linux (desktop and server)
-- Embedded Linux (Raspberry Pi, BeagleBone, Yocto-based systems)
-- Simulators (software-only environments)
-
-**Planned Extensions:**
-- Microcontrollers (RTOS or bare metal)
-- Automotive ECUs
-- Robotics platforms
-- Android devices (optional, later)
-
-> Android support is not required and not a dependency.  
-> UDB is inspired by ADB’s architecture, not built on ADB.
-
----
-
-## Supported Transports
-
-- USB (CDC / bulk)
-- TCP (local LAN, private networks)
-- Simulator loopback
-
-Transport selection is abstracted from the protocol.
-
----
-
-## CLI Experience (Example)
+### 2. Discover devices
 
 ```bash
 udb devices
-udb connect usb
+udb devices --json
+```
+
+Discovery uses UDP when available and falls back to known contexts when not.
+
+### 3. Connect and pair
+
+```bash
+udb connect 192.168.56.1:9910
 udb pair
-udb exec status
-udb logs
-udb push firmware.bin /flash
-udb reboot
+```
+
+Once paired, the device authorizes future connections from this client.
+
+### 4. Execute commands
+
+```bash
+udb exec "whoami"
+udb status
+udb status --json
 ```
 
 ---
 
+## Contexts
+
+Contexts allow you to work with multiple devices without repeatedly typing IP addresses.
+
+**Add a context**
+
+```bash
+udb context add lab 192.168.56.1:9910
+```
+
+**Select a context**
+
+```bash
+udb context use lab
+```
+
+**List contexts**
+
+```bash
+udb context list
+udb context list --json
+```
+
+Once a context is selected, all commands automatically target it:
+
+```bash
+udb exec "whoami"
+udb status
+```
+
+Contexts are stored locally and do not require discovery to function.
+
+---
+
+## Device Discovery Model
+
+UDB uses a layered discovery strategy:
+
+- UDP broadcast (fast path on local networks)
+- Saved contexts (reliable fallback)
+- Explicit targets (ip:port or tcp://)
+
+If UDP discovery is unavailable (common on Windows or restricted networks), UDB continues to work using contexts and explicit targets.
+
+---
+
+## Remote Targets (Explicit URLs)
+
+UDB supports explicit remote targets using URL syntax.
+
+**TCP targets**
+
+```bash
+udb connect tcp://host:9910
+udb exec tcp://host:9910 "uptime"
+udb status tcp://host:9910
+```
+
+URL targets:
+
+- bypass discovery
+- bypass contexts
+- are always explicit
+
+This makes UDB suitable for:
+
+- cloud VMs
+- CI runners
+- remote labs
+- cross-network access
+
+---
+
+## CLI Examples 
+
+```bash
+# Discover devices
+udb devices
+udb devices --json
+
+# Connect and pair
+udb connect 192.168.56.1:9910
+udb pair
+
+# Context management
+udb context add lab 192.168.56.1:9910
+udb context use lab
+udb context list
+
+# Execute commands
+udb exec "whoami"
+
+# Status
+udb status
+udb status --json
+
+# Remote targets
+udb connect tcp://example.com:9910
+udb exec tcp://example.com:9910 "uptime"
+```
+
+---
+
+## Security Model
+
+- Devices require explicit pairing
+- Clients are identified using cryptographic keypairs
+- Unpaired clients cannot execute commands
+- Pairing can be revoked at any time
+- Security decisions are enforced by the daemon.
+
+---
+
+## Configuration
+
+UDB stores local configuration in:
+
+```bash
+~/.udb/config.json
+```
+
+This includes:
+
+- saved contexts
+- current context
+- last-used target
+
+**View configuration:**
+
+```bash
+udb config show
+udb config show --json
+```
+
+---
+
+## Project Status
+
+- Phase 1: Core CLI + daemon (Complete)
+- Phase 2: Contexts, discovery fallback, remote targets (Complete)
+
+Current version: stable
+
+Future phases may introduce:
+
+- SSH targets
+- file transfer
+- remote forwarding
+- access control
+
+
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the Apache-2.0 License. See the LICENSE file for details.
