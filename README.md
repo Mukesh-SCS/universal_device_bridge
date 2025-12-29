@@ -65,7 +65,7 @@ Discovery uses UDP when available and falls back to known contexts when not.
 ### 3. Connect and pair
 
 ```bash
-udb connect 192.168.56.1:9910
+udb connect <ip>:9910
 udb pair
 ```
 
@@ -88,7 +88,7 @@ Contexts allow you to work with multiple devices without repeatedly typing IP ad
 **Add a context**
 
 ```bash
-udb context add lab 192.168.56.1:9910
+udb context add lab <ip>:9910
 ```
 
 **Select a context**
@@ -162,11 +162,11 @@ udb devices
 udb devices --json
 
 # Connect and pair
-udb connect 192.168.56.1:9910
+udb connect <ip>:9910
 udb pair
 
 # Context management
-udb context add lab 192.168.56.1:9910
+udb context add lab <ip>:9910
 udb context use lab
 udb context list
 
