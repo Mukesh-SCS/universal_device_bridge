@@ -746,15 +746,9 @@ export class UdbSession {
 
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        this.pendingCallbacks.delete("msg");
+        this.pendingCallbacks.delete("default");
         reject(new ConnectionError("Message timeout"));
       }, options.timeoutMs || 30000);
-
-      const cb = (msg) => {
-        clearTimeout(timeoutId);
-        this.pendingCallbacks.delete("msg");
-        resolve(msg);
-      };
 
       // Check if there's a queued message first
       if (this.messageQueue.length > 0) {
@@ -763,7 +757,13 @@ export class UdbSession {
         return resolve(queued);
       }
 
-      this.pendingCallbacks.set("msg", cb);
+      const cb = (msg) => {
+        clearTimeout(timeoutId);
+        this.pendingCallbacks.delete("default");
+        resolve(msg);
+      };
+
+      this.pendingCallbacks.set("default", cb);
       this.socket.write(encodeFrame(message));
     });
   }
@@ -785,20 +785,23 @@ export class UdbSession {
 
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        this.pendingCallbacks.delete("wait");
+        this.pendingCallbacks.delete("default");
         reject(new ConnectionError("Wait timeout"));
       }, timeoutMs);
 
       const cb = (msg) => {
         if (types.includes(msg.type)) {
           clearTimeout(timeoutId);
-          this.pendingCallbacks.delete("wait");
+          this.pendingCallbacks.delete("default");
           resolve(msg);
         }
-        // Otherwise, ignore this message and keep waiting
+        // If not matching type, re-queue it for later
+        else {
+          this.messageQueue.push(msg);
+        }
       };
 
-      this.pendingCallbacks.set("wait", cb);
+      this.pendingCallbacks.set("default", cb);
     });
   }
 }
