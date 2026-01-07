@@ -1,13 +1,21 @@
 
 # Universal Device Bridge (UDB)
 
-Universal Device Bridge (UDB) is a lightweight, secure, and scriptable system for discovering devices, pairing with them, and executing commands locally or remotely.
+Universal Device Bridge (UDB) is a **local-first, offline-capable device access tool** inspired by the architecture of Android Debug Bridge (ADB), but designed to work across **non-Android devices** such as:
 
-UDB is designed to work reliably across:
-- local networks
-- Windows environments
-- restricted networks
-- cloud and CI systems
+- **Linux systems** (servers, embedded Linux)
+- **Embedded platforms** (IoT devices, SBCs)
+- **MCUs** (microcontrollers via serial/TCP)
+- **Simulators** (virtual device testing)
+- **Automotive ECUs** (vehicle embedded systems)
+
+UDB provides a lightweight, secure, and scriptable system for discovering devices, pairing with them, and executing commands locally or remotely.
+
+It works reliably across:
+- Local networks (with or without UDP broadcast)
+- Windows, Linux, and macOS environments
+- Restricted/air-gapped networks
+- Cloud and CI/CD systems
 
 It provides a deterministic CLI experience similar in philosophy to tools like `kubectl` and `adb`, but without relying on fragile assumptions.
 
@@ -84,6 +92,12 @@ udb unpair <ip:port> [--all | --fp <fingerprint>]
 
 # Execute command
 udb exec [ip:port] "<cmd>"
+
+# Push file to device
+udb push [ip:port] <local-path> <remote-path>
+
+# Pull file from device
+udb pull [ip:port] <remote-path> <local-path>
 
 # List paired clients
 udb list-paired <ip:port> [--json]

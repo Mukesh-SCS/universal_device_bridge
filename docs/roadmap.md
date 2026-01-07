@@ -137,7 +137,7 @@ Evolution of Universal Device Bridge from local-first tool to scriptable platfor
 
 ```bash
 npm install @udb/client
-node scripts/01-discover.js
+node scripts/devices.js
 ```
 
 See [README.md](../README.md) and [API Reference](../client/API.md) for details.
@@ -160,7 +160,7 @@ Core protocol changes require careful consideration.
 ## Known Limitations & Future Work
 
 - MCU support not yet tested extensively
-- File transfer operations (in protocol but not CLI)
+- File transfer via push/pull commands (implemented ✅)
 - No persistent logging by default
 - No automatic retry/reconnect (by design)
 - No role-based access control (by design)
