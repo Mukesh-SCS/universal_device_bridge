@@ -42,15 +42,11 @@ Communication is authenticated using cryptographic keypairs and explicit pairing
 
 ## Quick Start 
 
-### 1. Start the daemon (on target machine)
+### 1. Start the daemon
 
 ```bash
-node daemon/linux/udbd.js --pairing auto
-```
-
-Output:
-```
-UDBD listening TCP on :9910
+# On target device (or use udb daemon start)
+udb daemon start
 ```
 
 ### 2. Discover devices
@@ -276,11 +272,11 @@ udb inventory --json > fleet.json
 
 ```javascript
 // See scripts/ folder for full examples
-node scripts/01-discover.js
-node scripts/02-batch-exec.js
-node scripts/03-session.js 192.168.1.100:9910
-node scripts/04-contexts.js
-node scripts/05-error-handling.js 192.168.1.100:9910
+node scripts/01-devices.js
+node scripts/02-exec.js
+node scripts/03-context.js 192.168.1.100:9910
+node scripts/04-pair-and-exec.js
+node scripts/05-group.js 192.168.1.100:9910
 ```
 
 ---
@@ -309,11 +305,10 @@ udb config show --json
 
 ## Documentation
 
-- [Phase 3 Implementation Plan](docs/PHASE3_PLAN.md)
+- [Testing Guide](test-setup.md) - Complete testing procedure
+- [API Reference](client/API.md) - Programmatic API details
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/roadmap.md)
-- [API Reference](client/API.md)
-- [Example Scripts](scripts/README.md)
 
 ---
 
