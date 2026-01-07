@@ -272,11 +272,11 @@ udb inventory --json > fleet.json
 
 ```javascript
 // See scripts/ folder for full examples
-node scripts/01-devices.js
-node scripts/02-exec.js
-node scripts/03-context.js 192.168.1.100:9910
-node scripts/04-pair-and-exec.js
-node scripts/05-group.js 192.168.1.100:9910
+node scripts/devices.js
+node scripts/exec.js
+node scripts/context.js 192.168.1.100:9910
+node scripts/pair.js
+node scripts/group.js 192.168.1.100:9910
 ```
 
 ---

@@ -155,19 +155,19 @@ test().catch(console.error);
 
 ```bash
 # Device discovery
-node scripts/01-devices.js
+node scripts/devices.js
 
 # Batch execution
-node scripts/02-exec.js
+node scripts/exec.js
 
 # Session usage
-node scripts/03-context.js 127.0.0.1:9910
+node scripts/context.js 127.0.0.1:9910
 
 # Pairing workflow
-node scripts/04-pair-and-exec.js
+node scripts/pair.js
 
 # Fleet operations
-node scripts/05-group.js
+node scripts/group.js
 ```
 
 ---
