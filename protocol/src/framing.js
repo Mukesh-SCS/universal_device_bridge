@@ -3,7 +3,14 @@ import { Buffer } from "node:buffer";
 const MAX_FRAME_BYTES = 8 * 1024 * 1024; // 8MB hard cap to prevent memory DoS
 
 export function encodeFrame(obj) {
-  const payload = Buffer.from(JSON.stringify(obj), "utf8");
+  // Convert Buffer objects to base64 for JSON serialization
+  const replacer = (key, value) => {
+    if (Buffer.isBuffer(value)) {
+      return { __buffer: true, data: value.toString("base64") };
+    }
+    return value;
+  };
+  const payload = Buffer.from(JSON.stringify(obj, replacer), "utf8");
   const header = Buffer.alloc(4);
   header.writeUInt32BE(payload.length, 0);
   return Buffer.concat([header, payload]);
@@ -33,7 +40,14 @@ export function createFrameDecoder(onMessage) {
 
       let msg;
       try {
-        msg = JSON.parse(payload);
+        // Convert base64 strings back to Buffers
+        const reviver = (key, value) => {
+          if (value && typeof value === "object" && value.__buffer === true) {
+            return Buffer.from(value.data, "base64");
+          }
+          return value;
+        };
+        msg = JSON.parse(payload, reviver);
       } catch {
         onMessage({ type: "error", error: "invalid_json" });
         continue;

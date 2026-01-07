@@ -26,7 +26,14 @@ export const MSG = {
   STATUS: "status",
   STATUS_RESULT: "status_result",
   LIST_PAIRED: "list_paired",
-  LIST_PAIRED_RESULT: "list_paired_result"
+  LIST_PAIRED_RESULT: "list_paired_result",
+  FILE_PUSH_START: "file_push_start",
+  FILE_PUSH_CHUNK: "file_push_chunk",
+  FILE_PUSH_END: "file_push_end",
+  FILE_PULL_START: "file_pull_start",
+  FILE_PULL_CHUNK: "file_pull_chunk",
+  FILE_PULL_END: "file_pull_end",
+  FILE_ERROR: "file_error"
 };
 
 export function hello({ clientName, pubKey }) {
