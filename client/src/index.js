@@ -92,12 +92,13 @@ export async function discoverDevices(timeoutMs = 1200) {
     sock.on("message", (msg, rinfo) => {
       try {
         const data = JSON.parse(msg.toString());
-        if (data.type === "udb_announce") {
-          const key = `${rinfo.address}:${data.port}`;
+        // Daemon responds with { name, tcpPort, udpPort }
+        if (data.tcpPort) {
+          const key = `${rinfo.address}:${data.tcpPort}`;
           found.set(key, {
             host: rinfo.address,
-            port: data.port,
-            name: data.name
+            port: data.tcpPort,
+            name: data.name || "unknown"
           });
         }
       } catch {}
@@ -105,8 +106,9 @@ export async function discoverDevices(timeoutMs = 1200) {
 
     sock.bind(() => {
       sock.setBroadcast(true);
+      // Send discovery request that daemon expects: "UDB_DISCOVER_V1"
       sock.send(
-        Buffer.from(JSON.stringify({ type: "udb_discover" })),
+        Buffer.from("UDB_DISCOVER_V1"),
         9909,
         "255.255.255.255"
       );
