@@ -15,40 +15,40 @@ It provides a deterministic CLI experience similar in philosophy to tools like `
 
 ## Key Features
 
-- Device discovery (UDP fast path)
-- Context-based device management
-- Explicit remote targets (`tcp://`)
-- Secure pairing and authorization
-- Command execution
-- JSON output for automation
-- Windows-safe behavior (no dependency on UDP)
+- **Device discovery** (UDP fast path with fallback)
+- **Context-based device management** (save & reuse known devices)
+- **Explicit remote targets** (`tcp://host:port`)
+- **Secure pairing and authorization** (cryptographic keypairs)
+- **Command execution** (with stdout/stderr)
+- **Programmatic API** (`@udb/client` - execute UDB from Node.js)
+- **Batch operations** (run commands across multiple devices)
+- **Fleet management** (logical grouping and labeling)
+- **JSON output for automation**
+- **100% offline** (no cloud, no telemetry)
 
 ---
 
 ## Architecture Overview
 
-UDB consists of two main components:
+UDB consists of:
 
-- **Daemon (`udbd`)**  
-  Runs on the target device and exposes a TCP control interface.
+- **Daemon (`udbd`)** - Runs on target device, exposes TCP control interface
+- **CLI (`udb`)** - Command-line tool for operators and scripts
+- **Client API (`@udb/client`)** - Programmatic API for automation
 
-- **CLI (`udb`)**  
-  Used by operators, scripts, and automation to discover, connect, and execute commands.
-
-Communication is authenticated and uses explicit pairing.
+Communication is authenticated using cryptographic keypairs and explicit pairing.
 
 ---
 
 ## Quick Start 
 
-### 1. Start the daemon (on the target machine)
+### 1. Start the daemon (on target machine)
 
 ```bash
 node daemon/linux/udbd.js --pairing auto
 ```
 
-Example output:
-
+Output:
 ```
 UDBD listening TCP on :9910
 ```
@@ -60,156 +60,246 @@ udb devices
 udb devices --json
 ```
 
-Discovery uses UDP when available and falls back to known contexts when not.
-
-### 3. Connect and pair
+### 3. Pair and execute
 
 ```bash
-udb connect <ip>:9910
-udb pair
-```
-
-Once paired, the device authorizes future connections from this client.
-
-### 4. Execute commands
-
-```bash
+udb pair 192.168.1.100:9910
 udb exec "whoami"
-udb status
-udb status --json
 ```
+
+---
+
+## CLI Usage
+
+### Device Operations
+
+```bash
+# Discover devices on network
+udb devices [--json]
+
+# Get device status
+udb status [ip:port] [--json]
+
+# Pair with device
+udb pair <ip:port>
+
+# Unpair from device
+udb unpair <ip:port> [--all | --fp <fingerprint>]
+
+# Execute command
+udb exec [ip:port] "<cmd>"
+
+# List paired clients
+udb list-paired <ip:port> [--json]
+```
+
+### Context Management
+
+```bash
+# Save a device as a context
+udb context add lab 192.168.1.100:9910
+
+# Select active context
+udb context use lab
+
+# List contexts
+udb context list [--json]
+
+# Once context is active, all commands target it
+udb exec "whoami"
+```
+
+### Fleet Management (Phase 3)
+
+```bash
+# Create a device group
+udb group add lab 192.168.1.100:9910 192.168.1.101:9910
+
+# Execute on entire group
+udb group exec lab "uname -a"
+
+# List groups
+udb group list [--json]
+
+# Export fleet inventory
+udb inventory [--json]
+```
+
+### Configuration
+
+```bash
+# View configuration
+udb config show [--json]
+
+# Daemon management
+udb daemon start
+udb daemon stop
+udb daemon status
+```
+
+---
+
+## Programmatic API
+
+Execute UDB operations from Node.js scripts or applications:
+
+```javascript
+import { exec, status, pair, discoverDevices } from "@udb/client";
+
+// Discover devices
+const devices = await discoverDevices();
+
+// Execute command
+const result = await exec("192.168.1.100:9910", "whoami");
+console.log(result.stdout); // "user\n"
+
+// Get device status
+const info = await status("192.168.1.100:9910");
+console.log(info.name); // "device-name"
+
+// Pair with device
+const pair_result = await pair("192.168.1.100:9910");
+console.log(pair_result.fingerprint);
+```
+
+### Advanced Features
+
+**Persistent Sessions:**
+```javascript
+const session = await createSession("192.168.1.100:9910");
+await session.exec("cmd1");
+await session.exec("cmd2");
+await session.close();
+```
+
+**Batch Execution:**
+```javascript
+const results = await execBatch(devices, "whoami", { parallel: true });
+```
+
+**Fleet Operations:**
+```javascript
+import { createGroup, execOnGroup } from "@udb/client/fleet";
+
+createGroup("lab", devices);
+const results = await execOnGroup("lab", "uname -a");
+```
+
+---
+
+## Discovery Strategy
+
+UDB uses layered device discovery:
+
+1. **UDP broadcast** (fast, local network)
+2. **Saved contexts** (reliable fallback)
+3. **Explicit targets** (always available)
+
+This ensures UDB works everywhere:
+- Local networks with broadcast
+- Restricted networks without UDP
+- Cloud environments
+- CI/CD systems
 
 ---
 
 ## Contexts
 
-Contexts allow you to work with multiple devices without repeatedly typing IP addresses.
-
-**Add a context**
+Contexts save device addresses locally for easy access:
 
 ```bash
-udb context add lab <ip>:9910
-```
+# Add context
+udb context add production 10.0.0.100:9910
+udb context add staging 10.0.1.100:9910
 
-**Select a context**
+# Use context
+udb context use production
 
-```bash
-udb context use lab
-```
-
-**List contexts**
-
-```bash
-udb context list
-udb context list --json
-```
-
-Once a context is selected, all commands automatically target it:
-
-```bash
-udb exec "whoami"
+# Commands now target this device
+udb exec "hostname"
 udb status
 ```
 
-Contexts are stored locally and do not require discovery to function.
-
----
-
-## Device Discovery Model
-
-UDB uses a layered discovery strategy:
-
-- UDP broadcast (fast path on local networks)
-- Saved contexts (reliable fallback)
-- Explicit targets (ip:port or tcp://)
-
-If UDP discovery is unavailable (common on Windows or restricted networks), UDB continues to work using contexts and explicit targets.
-
----
-
-## Remote Targets (Explicit URLs)
-
-UDB supports explicit remote targets using URL syntax.
-
-**TCP targets**
-
-```bash
-udb connect tcp://host:9910
-udb exec tcp://host:9910 "uptime"
-udb status tcp://host:9910
-```
-
-URL targets:
-
-- bypass discovery
-- bypass contexts
-- are always explicit
-
-This makes UDB suitable for:
-
-- cloud VMs
-- CI runners
-- remote labs
-- cross-network access
-
----
-
-## CLI Examples 
-
-```bash
-# Discover devices
-udb devices
-udb devices --json
-
-# Connect and pair
-udb connect <ip>:9910
-udb pair
-
-# Context management
-udb context add lab <ip>:9910
-udb context use lab
-udb context list
-
-# Execute commands
-udb exec "whoami"
-
-# Status
-udb status
-udb status --json
-
-# Remote targets
-udb connect tcp://example.com:9910
-udb exec tcp://example.com:9910 "uptime"
-```
+Contexts are stored in `~/.udb/config.json` and work offline.
 
 ---
 
 ## Security Model
 
-- Devices require explicit pairing
-- Clients are identified using cryptographic keypairs
-- Unpaired clients cannot execute commands
-- Pairing can be revoked at any time
-- Security decisions are enforced by the daemon.
+- **Explicit pairing** - Devices must approve first connection
+- **Cryptographic keypairs** - Each client has unique keypair
+- **Fingerprint verification** - Optional pairing confirmation
+- **Revocable access** - Unpair to revoke client access
+- **No global trust** - No central authority needed
+
+---
+
+## Project Status
+
+| Phase | Status | Features |
+|-------|--------|----------|
+| 1 | ✅ Complete | Core CLI, daemon, protocol, security |
+| 2 | ✅ Complete | Contexts, discovery fallback, remote targets |
+| 3 | ✅ Complete | Programmatic API, batch ops, fleet management |
+
+**Current version:** v0.3.0 (Phase 3)
+
+---
+
+## Examples
+
+### Example 1: Basic execution
+
+```bash
+udb pair 192.168.1.100:9910
+udb exec "uptime"
+```
+
+### Example 2: Using contexts
+
+```bash
+udb context add lab 192.168.1.100:9910
+udb context use lab
+udb exec "df -h"
+udb status --json
+```
+
+### Example 3: Fleet operation
+
+```bash
+udb group add lab 192.168.1.100:9910 192.168.1.101:9910 192.168.1.102:9910
+udb group exec lab "systemctl status nginx"
+udb inventory --json > fleet.json
+```
+
+### Example 4: Programmatic usage
+
+```javascript
+// See scripts/ folder for full examples
+node scripts/01-discover.js
+node scripts/02-batch-exec.js
+node scripts/03-session.js 192.168.1.100:9910
+node scripts/04-contexts.js
+node scripts/05-error-handling.js 192.168.1.100:9910
+```
 
 ---
 
 ## Configuration
 
-UDB stores local configuration in:
+UDB stores configuration in `~/.udb/config.json`:
 
-```bash
-~/.udb/config.json
+```json
+{
+  "lastTarget": { "host": "192.168.1.100", "port": 9910 },
+  "currentContext": "lab",
+  "contexts": {
+    "lab": { "host": "192.168.1.100", "port": 9910, "name": "lab-device" }
+  }
+}
 ```
 
-This includes:
-
-- saved contexts
-- current context
-- last-used target
-
-**View configuration:**
-
+View configuration:
 ```bash
 udb config show
 udb config show --json
@@ -217,20 +307,40 @@ udb config show --json
 
 ---
 
-## Project Status
+## Documentation
 
-- Phase 1: Core CLI + daemon (Complete)
-- Phase 2: Contexts, discovery fallback, remote targets (Complete)
+- [Phase 3 Implementation Plan](docs/PHASE3_PLAN.md)
+- [Architecture](docs/architecture.md)
+- [Roadmap](docs/roadmap.md)
+- [API Reference](client/API.md)
+- [Example Scripts](scripts/README.md)
 
-Current version: stable
+---
 
-Future phases may introduce:
+## Design Philosophy
 
-- SSH targets
-- file transfer
-- remote forwarding
-- access control
+UDB follows these principles:
 
+1. **Local-first** - All operations work offline
+2. **Explicit** - No magic, clear target specification
+3. **Secure** - Cryptographic by default
+4. **Scriptable** - Both CLI and programmatic APIs
+5. **Reliable** - Deterministic behavior across platforms
+6. **Simple** - No complex orchestration
+7. **Composable** - Works in pipelines and automation
+
+---
+
+## 100% Offline
+
+UDB requires **no cloud connection**:
+- Discovery works on local networks
+- Pairing is local-only
+- No telemetry
+- No external dependencies
+- Works in air-gapped environments
+
+---
 
 ## License
 

@@ -6,6 +6,7 @@
     "udb": "src/udb.js"
   },
   "dependencies": {
-    "@udb/protocol": "0.1.0"
+    "@udb/protocol": "0.1.0",
+    "@udb/client": "0.1.0"
   }
 }
