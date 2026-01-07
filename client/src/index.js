@@ -574,6 +574,133 @@ export function removeContext(name) {
   }
 }
 
+/* ===================== Stream Abstraction ===================== */
+
+/**
+ * Represents a bidirectional stream within a service
+ * Implements EventEmitter-like interface for data/close/error events
+ */
+class Stream {
+  constructor(session, streamId, serviceName) {
+    this.session = session;
+    this.streamId = streamId;
+    this.serviceName = serviceName;
+    this.closed = false;
+    this.listeners = {
+      data: [],
+      close: [],
+      error: []
+    };
+  }
+
+  /**
+   * Write data to stream
+   */
+  write(data) {
+    if (this.closed) {
+      throw new UdbError("Stream is closed", "STREAM_CLOSED");
+    }
+
+    const dataStr = typeof data === "string" ? data : Buffer.from(data).toString("base64");
+    this.session.socket.write(
+      encodeFrame({
+        type: MSG.STREAM_DATA,
+        streamId: this.streamId,
+        b64: dataStr
+      })
+    );
+  }
+
+  /**
+   * Resize terminal stream
+   */
+  resize(cols, rows) {
+    if (this.closed) {
+      throw new UdbError("Stream is closed", "STREAM_CLOSED");
+    }
+
+    this.session.socket.write(
+      encodeFrame({
+        type: MSG.STREAM_RESIZE,
+        streamId: this.streamId,
+        cols,
+        rows
+      })
+    );
+  }
+
+  /**
+   * Close stream
+   */
+  close() {
+    if (!this.closed) {
+      this.closed = true;
+      this.session.socket.write(
+        encodeFrame({
+          type: MSG.STREAM_CLOSE,
+          streamId: this.streamId
+        })
+      );
+    }
+  }
+
+  /**
+   * Register listener for stream event
+   */
+  on(event, callback) {
+    if (this.listeners[event]) {
+      this.listeners[event].push(callback);
+    }
+    return this;
+  }
+
+  /**
+   * Remove listener
+   */
+  off(event, callback) {
+    if (this.listeners[event]) {
+      this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
+    }
+    return this;
+  }
+
+  /**
+   * Emit event to all listeners
+   */
+  _emit(event, ...args) {
+    if (this.listeners[event]) {
+      for (const cb of this.listeners[event]) {
+        cb(...args);
+      }
+    }
+  }
+
+  /**
+   * Data received on stream
+   */
+  _onData(b64Data) {
+    const data = Buffer.from(b64Data || "", "base64");
+    this._emit("data", data);
+  }
+
+  /**
+   * Stream closed by remote
+   */
+  _onClose() {
+    if (!this.closed) {
+      this.closed = true;
+      this._emit("close");
+    }
+  }
+
+  /**
+   * Error on stream
+   */
+  _onError(message) {
+    this._emit("error", new UdbError(message, "STREAM_ERROR"));
+  }
+}
+
 /* ===================== Session Abstraction ===================== */
 
 /**
@@ -598,6 +725,8 @@ export class UdbSession {
     this.pendingCallbacks = new Map();
     this.messageQueue = []; // Queue for messages not immediately claimed
     this.callId = 0;
+    this.openStreams = new Map(); // Map<streamId, Stream>
+    this.nextStreamId = 1;
   }
 
   /**
@@ -624,6 +753,23 @@ export class UdbSession {
         if (m.type === MSG.AUTH_OK) {
           this.authenticated = true;
           resolve();
+          return;
+        }
+
+        // Route stream messages by streamId
+        if (m.streamId) {
+          const stream = this.openStreams.get(m.streamId);
+          if (stream) {
+            if (m.type === MSG.STREAM_DATA) {
+              stream._onData(m.b64);
+            } else if (m.type === MSG.STREAM_CLOSE) {
+              stream._onClose();
+              this.openStreams.delete(m.streamId);
+            } else if (m.type === MSG.SERVICE_ERROR) {
+              stream._onError(m.error || "Stream error");
+              this.openStreams.delete(m.streamId);
+            }
+          }
           return;
         }
 
@@ -734,6 +880,36 @@ export class UdbSession {
       this.socket = null;
       this.authenticated = false;
     }
+  }
+
+  /**
+   * Open a named service on the device, returning a stream
+   * @param {string} serviceName - Name of service (e.g., "shell", "exec", "logs")
+   * @param {object} options - Service options (e.g., {pty: true, cols: 80, rows: 24})
+   * @returns {Promise<Stream>} Stream object for bidirectional communication
+   */
+  async openService(serviceName, options = {}) {
+    if (!this.authenticated) {
+      throw new UdbError("Session not authenticated", "NOT_CONNECTED");
+    }
+
+    const streamId = this.nextStreamId++;
+    const stream = new Stream(this, streamId, serviceName);
+    this.openStreams.set(streamId, stream);
+
+    // Send OPEN_SERVICE message to daemon
+    this.socket.write(
+      encodeFrame({
+        type: MSG.OPEN_SERVICE,
+        streamId,
+        service: serviceName,
+        ...options
+      })
+    );
+
+    // Wait for the stream to be acknowledged (either STREAM_DATA or SERVICE_ERROR)
+    // For now, just return the stream and let the daemon establish it
+    return stream;
   }
 
   /**
@@ -1018,6 +1194,13 @@ export async function pull(target, remotePath, localPath, options = {}) {
 
 /* ===================== Exports ===================== */
 
+/**
+ * Alias for createSession - creates a session with streaming capability
+ */
+export async function createStreamingSession(target) {
+  return createSession(target);
+}
+
 export default {
   discoverDevices,
   parseTarget,
@@ -1037,7 +1220,9 @@ export default {
   getContext,
   removeContext,
   createSession,
+  createStreamingSession,
   UdbSession,
+  Stream,
   execBatch,
   UdbError,
   AuthError,

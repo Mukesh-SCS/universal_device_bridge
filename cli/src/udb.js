@@ -356,6 +356,77 @@ async function execCmd() {
   }
 }
 
+async function shellCmd() {
+  try {
+    let targetArg;
+
+    if (rest[0] && rest[0].includes(":")) {
+      targetArg = rest[0];
+    } else {
+      targetArg = undefined;
+    }
+
+    const target = await resolveTarget(targetArg);
+    
+    // Import streaming client
+    const { createStreamingSession } = await import("@udb/client");
+    
+    const session = await createStreamingSession(target);
+    
+    // Open shell service
+    const shellStream = await session.openService("shell", {
+      pty: true,
+      cols: process.stdout.columns || 80,
+      rows: process.stdout.rows || 24
+    });
+
+    // Set up terminal
+    const origMode = process.stdin.isTTY ? process.stdin.isRawMode : null;
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.setEncoding("utf8");
+
+    // Forward resize events
+    const onResize = () => {
+      shellStream.resize(process.stdout.columns || 80, process.stdout.rows || 24);
+    };
+    process.stdout.on("resize", onResize);
+
+    // Forward stdin to shell
+    process.stdin.on("data", (chunk) => {
+      shellStream.write(chunk);
+    });
+
+    // Forward shell output to stdout
+    shellStream.on("data", (chunk) => {
+      process.stdout.write(chunk);
+    });
+
+    // Handle stream close
+    shellStream.on("close", () => {
+      process.stdin.setRawMode(false);
+      process.stdout.off("resize", onResize);
+      process.exit(0);
+    });
+
+    // Handle shell exit via error
+    shellStream.on("error", (err) => {
+      process.stdin.setRawMode(false);
+      process.stdout.off("resize", onResize);
+      if (err.message !== "stream_closed") {
+        die(err.message);
+      }
+      process.exit(0);
+    });
+
+  } catch (err) {
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(false);
+    }
+    die(formatError(err));
+  }
+}
+
 async function connectCmd() {
   try {
     if (!rest[0]) {
@@ -750,6 +821,7 @@ async function main() {
   if (cmd === "devices") return devicesCmd();
   if (cmd === "pair") return pairCmd();
   if (cmd === "unpair") return unpairCmd();
+  if (cmd === "shell") return shellCmd();
   if (cmd === "exec") return execCmd();
   if (cmd === "push") return pushCmd();
   if (cmd === "pull") return pullCmd();
@@ -775,6 +847,7 @@ Usage:
   udb status [ip:port] [--json]
   udb pair <ip:port>
   udb unpair <ip:port> [--all | --fp <fingerprint>]
+  udb shell [ip:port]
   udb exec [ip:port] "<cmd>"
   udb push [ip:port] <local-path> <remote-path>
   udb pull [ip:port] <remote-path> <local-path>
@@ -795,6 +868,8 @@ Fleet Management:
 Examples:
   udb devices
   udb pair 192.168.1.100:9910
+  udb shell
+  udb shell 192.168.1.100:9910
   udb exec "whoami"
   udb exec 192.168.1.100:9910 "ls /tmp"
   udb push 192.168.1.100:9910 /tmp/local.txt /tmp/remote.txt

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "dependencies": {
-    "@udb/protocol": "0.1.0"
+    "@udb/protocol": "0.1.0",
+    "node-pty": "^1.0.0"
   }
 }

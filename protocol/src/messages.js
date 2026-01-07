@@ -33,7 +33,13 @@ export const MSG = {
   FILE_PULL_START: "file_pull_start",
   FILE_PULL_CHUNK: "file_pull_chunk",
   FILE_PULL_END: "file_pull_end",
-  FILE_ERROR: "file_error"
+  FILE_ERROR: "file_error",
+  // Streaming services
+  OPEN_SERVICE: "open_service",
+  STREAM_DATA: "stream_data",
+  STREAM_CLOSE: "stream_close",
+  STREAM_RESIZE: "stream_resize",
+  SERVICE_ERROR: "service_error"
 };
 
 export function hello({ clientName, pubKey }) {
