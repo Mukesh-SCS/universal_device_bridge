@@ -795,6 +795,162 @@ export async function execBatch(targets, command, options = {}) {
   return results;
 }
 
+/* ===================== File Transfer (Push/Pull) ===================== */
+
+/**
+ * Push a file to a device
+ * @param {string|object} target - Device target (ip:port or parsed target)
+ * @param {string} localPath - Path to local file to send
+ * @param {string} remotePath - Path where file will be saved on device
+ * @param {object} options - Options (session, timeout)
+ * @returns {Promise<{success: boolean, bytes: number}>}
+ */
+export async function push(target, localPath, remotePath, options = {}) {
+  const parsed = parseTarget(target);
+  const session = options.session || (await createSession(parsed));
+  
+  try {
+    // Check if local file exists
+    if (!fs.existsSync(localPath)) {
+      throw new UdbError(`Local file not found: ${localPath}`, "FILE_NOT_FOUND");
+    }
+
+    const fileStats = fs.statSync(localPath);
+    const fileSize = fileStats.size;
+    const fileName = path.basename(localPath);
+
+    // Send PUSH_BEGIN
+    const pushBegin = {
+      type: MSG.FILE_PUSH_START,
+      path: remotePath,
+      size: fileSize,
+      name: fileName
+    };
+
+    await session.sendMessage(pushBegin);
+    const response = await session.waitForMessage(MSG.FILE_PUSH_CHUNK, 5000);
+
+    if (response.type === MSG.ERROR) {
+      throw new UdbError(response.message || "Device rejected push", "PUSH_REJECTED");
+    }
+
+    // Read and send file in chunks
+    const chunkSize = 64 * 1024; // 64KB chunks
+    const buffer = Buffer.alloc(chunkSize);
+    const fileHandle = fs.openSync(localPath, "r");
+    
+    let bytesRead = 0;
+    let totalRead = 0;
+
+    try {
+      while ((bytesRead = fs.readSync(fileHandle, buffer, 0, chunkSize)) > 0) {
+        const chunk = buffer.slice(0, bytesRead);
+        const pushChunk = {
+          type: MSG.FILE_PUSH_CHUNK,
+          offset: totalRead,
+          data: chunk.toString("base64"),
+          size: bytesRead
+        };
+
+        await session.sendMessage(pushChunk);
+        totalRead += bytesRead;
+      }
+    } finally {
+      fs.closeSync(fileHandle);
+    }
+
+    // Send PUSH_END
+    const pushEnd = {
+      type: MSG.FILE_PUSH_END,
+      path: remotePath,
+      totalBytes: totalRead
+    };
+
+    await session.sendMessage(pushEnd);
+    const finalResponse = await session.waitForMessage([MSG.FILE_PUSH_CHUNK, MSG.ERROR], 5000);
+
+    if (finalResponse.type === MSG.ERROR) {
+      throw new UdbError(finalResponse.message || "Push failed on device", "PUSH_FAILED");
+    }
+
+    return { success: true, bytes: totalRead };
+  } finally {
+    if (!options.session) {
+      session.close();
+    }
+  }
+}
+
+/**
+ * Pull a file from a device
+ * @param {string|object} target - Device target (ip:port or parsed target)
+ * @param {string} remotePath - Path to file on device
+ * @param {string} localPath - Where to save the file locally
+ * @param {object} options - Options (session, timeout)
+ * @returns {Promise<{success: boolean, bytes: number}>}
+ */
+export async function pull(target, remotePath, localPath, options = {}) {
+  const parsed = parseTarget(target);
+  const session = options.session || (await createSession(parsed));
+
+  try {
+    // Ensure directory exists
+    fs.mkdirSync(path.dirname(localPath), { recursive: true });
+
+    // Send PULL_BEGIN
+    const pullBegin = {
+      type: MSG.FILE_PULL_START,
+      path: remotePath
+    };
+
+    await session.sendMessage(pullBegin);
+    const response = await session.waitForMessage([MSG.FILE_PULL_CHUNK, MSG.ERROR], 5000);
+
+    if (response.type === MSG.ERROR) {
+      throw new UdbError(response.message || "Device rejected pull", "PULL_REJECTED");
+    }
+
+    // Receive file chunks
+    const fileHandle = fs.openSync(localPath, "w");
+    let totalBytes = 0;
+
+    try {
+      let chunk = response;
+
+      while (chunk.type === MSG.FILE_PULL_CHUNK) {
+        const data = Buffer.from(chunk.data, "base64");
+        fs.writeSync(fileHandle, data);
+        totalBytes += data.length;
+
+        // Request next chunk
+        chunk = await session.waitForMessage([MSG.FILE_PULL_CHUNK, MSG.FILE_PULL_END, MSG.ERROR], 5000);
+      }
+
+      if (chunk.type === MSG.ERROR) {
+        fs.closeSync(fileHandle);
+        fs.unlinkSync(localPath);
+        throw new UdbError(chunk.message || "Pull failed on device", "PULL_FAILED");
+      }
+    } finally {
+      fs.closeSync(fileHandle);
+    }
+
+    // Send PULL_END acknowledgment
+    const pullEnd = {
+      type: MSG.FILE_PULL_END,
+      path: remotePath
+    };
+
+    await session.sendMessage(pullEnd);
+
+    return { success: true, bytes: totalBytes };
+  } finally {
+    if (!options.session) {
+      session.close();
+    }
+  }
+}
+
 /* ===================== Exports ===================== */
 
 export default {
@@ -807,6 +963,8 @@ export default {
   unpair,
   listPaired,
   exec,
+  push,
+  pull,
   getContexts,
   getCurrentContextName,
   setCurrentContext,

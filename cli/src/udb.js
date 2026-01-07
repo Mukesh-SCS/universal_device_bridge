@@ -22,6 +22,8 @@ import {
   unpair,
   listPaired,
   exec,
+  push,
+  pull,
   getContexts,
   getCurrentContextName,
   setCurrentContext,
@@ -666,6 +668,82 @@ async function inventoryCmd() {
   }
 }
 
+async function pushCmd() {
+  try {
+    if (rest.length < 2) {
+      die('Usage: udb push [ip:port] <local-path> <remote-path>');
+    }
+
+    // Check if first arg is a target
+    let target;
+    let localPath;
+    let remotePath;
+
+    if (rest[0].includes(":")) {
+      target = rest[0];
+      localPath = rest[1];
+      remotePath = rest[2];
+    } else {
+      target = await resolveTarget();
+      localPath = rest[0];
+      remotePath = rest[1];
+    }
+
+    if (!localPath || !remotePath) {
+      die('Usage: udb push [ip:port] <local-path> <remote-path>');
+    }
+
+    // Check if local file exists
+    if (!fs.existsSync(localPath)) {
+      die(`Local file not found: ${localPath}`);
+    }
+
+    const stats = fs.statSync(localPath);
+    console.log(`Pushing ${localPath} (${stats.size} bytes) to ${target}:${remotePath}...`);
+
+    const result = await push(target, localPath, remotePath);
+
+    console.log(`✓ Pushed ${result.bytes} bytes successfully`);
+  } catch (err) {
+    die(formatError(err));
+  }
+}
+
+async function pullCmd() {
+  try {
+    if (rest.length < 2) {
+      die('Usage: udb pull [ip:port] <remote-path> <local-path>');
+    }
+
+    // Check if first arg is a target
+    let target;
+    let remotePath;
+    let localPath;
+
+    if (rest[0].includes(":")) {
+      target = rest[0];
+      remotePath = rest[1];
+      localPath = rest[2];
+    } else {
+      target = await resolveTarget();
+      remotePath = rest[0];
+      localPath = rest[1];
+    }
+
+    if (!remotePath || !localPath) {
+      die('Usage: udb pull [ip:port] <remote-path> <local-path>');
+    }
+
+    console.log(`Pulling ${remotePath} from ${target} to ${localPath}...`);
+
+    const result = await pull(target, remotePath, localPath);
+
+    console.log(`✓ Pulled ${result.bytes} bytes successfully to ${localPath}`);
+  } catch (err) {
+    die(formatError(err));
+  }
+}
+
 /* ===================== main ===================== */
 
 async function main() {
@@ -673,6 +751,8 @@ async function main() {
   if (cmd === "pair") return pairCmd();
   if (cmd === "unpair") return unpairCmd();
   if (cmd === "exec") return execCmd();
+  if (cmd === "push") return pushCmd();
+  if (cmd === "pull") return pullCmd();
   if (cmd === "status") return statusCmd();
   if (cmd === "list-paired") return listPairedCmd();
   if (cmd === "daemon" && rest[0] === "start") return daemonStart();
@@ -696,6 +776,8 @@ Usage:
   udb pair <ip:port>
   udb unpair <ip:port> [--all | --fp <fingerprint>]
   udb exec [ip:port] "<cmd>"
+  udb push [ip:port] <local-path> <remote-path>
+  udb pull [ip:port] <remote-path> <local-path>
   udb list-paired <ip:port> [--json]
   udb connect <ip:port | device-name>
   udb context list [--json]
@@ -715,6 +797,8 @@ Examples:
   udb pair 192.168.1.100:9910
   udb exec "whoami"
   udb exec 192.168.1.100:9910 "ls /tmp"
+  udb push 192.168.1.100:9910 /tmp/local.txt /tmp/remote.txt
+  udb pull 192.168.1.100:9910 /tmp/remote.txt /tmp/local.txt
   udb context add lab 192.168.1.100:9910
   udb context use lab
   udb group add lab 192.168.1.100:9910 192.168.1.101:9910
@@ -722,7 +806,7 @@ Examples:
   udb inventory --json
 
 For programmatic use, import @udb/client:
-  import { exec, status, pair } from "@udb/client";
+  import { exec, status, pair, push, pull } from "@udb/client";
   import { createGroup, execOnGroup } from "@udb/client/fleet";
 `);
 }
