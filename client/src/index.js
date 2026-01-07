@@ -899,6 +899,10 @@ export async function push(target, localPath, remotePath, options = {}) {
       throw new UdbError(pushBegin.error || "Device rejected push", "PUSH_REJECTED");
     }
 
+    if (pushBegin.type !== "push_ready") {
+      throw new UdbError(`Unexpected response: ${pushBegin.type}`, "PROTOCOL_ERROR");
+    }
+
     // Read and send file in chunks
     const chunkSize = 64 * 1024; // 64KB chunks
     const buffer = Buffer.alloc(chunkSize);
@@ -933,6 +937,10 @@ export async function push(target, localPath, remotePath, options = {}) {
 
     if (pushEnd.type === MSG.ERROR) {
       throw new UdbError(pushEnd.error || "Push end failed", "PUSH_FAILED");
+    }
+
+    if (pushEnd.type !== "push_ok") {
+      throw new UdbError(`Unexpected response: ${pushEnd.type}`, "PROTOCOL_ERROR");
     }
 
     return { success: true, bytes: totalRead };
