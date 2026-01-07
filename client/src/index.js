@@ -730,6 +730,56 @@ export class UdbSession {
       this.authenticated = false;
     }
   }
+
+  /**
+   * Send message and wait for response with callback
+   */
+  async sendMessage(message, options = {}) {
+    if (!this.authenticated) {
+      throw new UdbError("Session not authenticated", "NOT_CONNECTED");
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new ConnectionError("Message timeout"));
+      }, options.timeoutMs || 30000);
+
+      const cb = (msg) => {
+        clearTimeout(timeoutId);
+        resolve(msg);
+      };
+
+      this.pendingCallbacks.set("msg", cb);
+      this.socket.write(encodeFrame(message));
+    });
+  }
+
+  /**
+   * Wait for message of specific type(s)
+   */
+  async waitForMessage(types, timeoutMs = 10000) {
+    if (!Array.isArray(types)) {
+      types = [types];
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new ConnectionError("Wait timeout"));
+      }, timeoutMs);
+
+      const cb = (msg) => {
+        if (types.includes(msg.type)) {
+          clearTimeout(timeoutId);
+          resolve(msg);
+        } else {
+          // Continue waiting, put callback back
+          this.pendingCallbacks.set("msg", cb);
+        }
+      };
+
+      this.pendingCallbacks.set("msg", cb);
+    });
+  }
 }
 
 /* ===================== Batch Operations ===================== */
@@ -817,21 +867,15 @@ export async function push(target, localPath, remotePath, options = {}) {
 
     const fileStats = fs.statSync(localPath);
     const fileSize = fileStats.size;
-    const fileName = path.basename(localPath);
 
     // Send PUSH_BEGIN
-    const pushBegin = {
-      type: MSG.FILE_PUSH_START,
-      path: remotePath,
-      size: fileSize,
-      name: fileName
-    };
+    const pushBegin = await session.sendMessage({
+      type: MSG.PUSH_BEGIN,
+      remotePath: remotePath
+    });
 
-    await session.sendMessage(pushBegin);
-    const response = await session.waitForMessage(MSG.FILE_PUSH_CHUNK, 5000);
-
-    if (response.type === MSG.ERROR) {
-      throw new UdbError(response.message || "Device rejected push", "PUSH_REJECTED");
+    if (pushBegin.type === MSG.ERROR) {
+      throw new UdbError(pushBegin.error || "Device rejected push", "PUSH_REJECTED");
     }
 
     // Read and send file in chunks
@@ -845,14 +889,15 @@ export async function push(target, localPath, remotePath, options = {}) {
     try {
       while ((bytesRead = fs.readSync(fileHandle, buffer, 0, chunkSize)) > 0) {
         const chunk = buffer.slice(0, bytesRead);
-        const pushChunk = {
-          type: MSG.FILE_PUSH_CHUNK,
-          offset: totalRead,
-          data: chunk.toString("base64"),
-          size: bytesRead
-        };
+        const pushChunk = await session.sendMessage({
+          type: MSG.PUSH_CHUNK,
+          b64: chunk.toString("base64")
+        });
 
-        await session.sendMessage(pushChunk);
+        if (pushChunk.type === MSG.ERROR) {
+          throw new UdbError(pushChunk.error || "Push chunk failed", "PUSH_FAILED");
+        }
+
         totalRead += bytesRead;
       }
     } finally {
@@ -860,17 +905,13 @@ export async function push(target, localPath, remotePath, options = {}) {
     }
 
     // Send PUSH_END
-    const pushEnd = {
-      type: MSG.FILE_PUSH_END,
-      path: remotePath,
-      totalBytes: totalRead
-    };
+    const pushEnd = await session.sendMessage({
+      type: MSG.PUSH_END,
+      remotePath: remotePath
+    });
 
-    await session.sendMessage(pushEnd);
-    const finalResponse = await session.waitForMessage([MSG.FILE_PUSH_CHUNK, MSG.ERROR], 5000);
-
-    if (finalResponse.type === MSG.ERROR) {
-      throw new UdbError(finalResponse.message || "Push failed on device", "PUSH_FAILED");
+    if (pushEnd.type === MSG.ERROR) {
+      throw new UdbError(pushEnd.error || "Push end failed", "PUSH_FAILED");
     }
 
     return { success: true, bytes: totalRead };
@@ -898,16 +939,13 @@ export async function pull(target, remotePath, localPath, options = {}) {
     fs.mkdirSync(path.dirname(localPath), { recursive: true });
 
     // Send PULL_BEGIN
-    const pullBegin = {
-      type: MSG.FILE_PULL_START,
-      path: remotePath
-    };
+    const pullBegin = await session.sendMessage({
+      type: MSG.PULL_BEGIN,
+      remotePath: remotePath
+    });
 
-    await session.sendMessage(pullBegin);
-    const response = await session.waitForMessage([MSG.FILE_PULL_CHUNK, MSG.ERROR], 5000);
-
-    if (response.type === MSG.ERROR) {
-      throw new UdbError(response.message || "Device rejected pull", "PULL_REJECTED");
+    if (pullBegin.type === MSG.ERROR) {
+      throw new UdbError(pullBegin.error || "Device rejected pull", "PULL_REJECTED");
     }
 
     // Receive file chunks
@@ -915,33 +953,28 @@ export async function pull(target, remotePath, localPath, options = {}) {
     let totalBytes = 0;
 
     try {
-      let chunk = response;
+      while (true) {
+        const chunk = await session.waitForMessage([MSG.PULL_CHUNK, MSG.PULL_END, MSG.ERROR], 30000);
 
-      while (chunk.type === MSG.FILE_PULL_CHUNK) {
-        const data = Buffer.from(chunk.data, "base64");
-        fs.writeSync(fileHandle, data);
-        totalBytes += data.length;
+        if (chunk.type === MSG.ERROR) {
+          fs.closeSync(fileHandle);
+          fs.unlinkSync(localPath);
+          throw new UdbError(chunk.error || "Pull failed on device", "PULL_FAILED");
+        }
 
-        // Request next chunk
-        chunk = await session.waitForMessage([MSG.FILE_PULL_CHUNK, MSG.FILE_PULL_END, MSG.ERROR], 5000);
-      }
+        if (chunk.type === MSG.PULL_END) {
+          break;
+        }
 
-      if (chunk.type === MSG.ERROR) {
-        fs.closeSync(fileHandle);
-        fs.unlinkSync(localPath);
-        throw new UdbError(chunk.message || "Pull failed on device", "PULL_FAILED");
+        if (chunk.type === MSG.PULL_CHUNK) {
+          const data = Buffer.from(chunk.b64 || "", "base64");
+          fs.writeSync(fileHandle, data);
+          totalBytes += data.length;
+        }
       }
     } finally {
       fs.closeSync(fileHandle);
     }
-
-    // Send PULL_END acknowledgment
-    const pullEnd = {
-      type: MSG.FILE_PULL_END,
-      path: remotePath
-    };
-
-    await session.sendMessage(pullEnd);
 
     return { success: true, bytes: totalBytes };
   } finally {
