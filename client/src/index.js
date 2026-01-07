@@ -596,6 +596,7 @@ export class UdbSession {
     this.decoder = null;
     this.authenticated = false;
     this.pendingCallbacks = new Map();
+    this.messageQueue = []; // Queue for messages not immediately claimed
     this.callId = 0;
   }
 
@@ -626,11 +627,14 @@ export class UdbSession {
           return;
         }
 
-        // Route message to pending callback
+        // Route message to pending callback or queue it
         const cb = this.pendingCallbacks.get(m.callId || "default");
         if (cb) {
-          this.pendingCallbacks.delete(m.callId || "default");
+          // Don't delete - let callback decide if it wants more messages
           cb(m);
+        } else {
+          // No one waiting - queue the message
+          this.messageQueue.push(m);
         }
       });
 
@@ -662,6 +666,7 @@ export class UdbSession {
 
       const cb = (msg) => {
         clearTimeout(timeoutId);
+        this.pendingCallbacks.delete("default");
         resolve({ msg });
       };
 
@@ -732,7 +737,7 @@ export class UdbSession {
   }
 
   /**
-   * Send message and wait for response with callback
+   * Send message and wait for response (next message from server)
    */
   async sendMessage(message, options = {}) {
     if (!this.authenticated) {
@@ -741,13 +746,22 @@ export class UdbSession {
 
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
+        this.pendingCallbacks.delete("msg");
         reject(new ConnectionError("Message timeout"));
       }, options.timeoutMs || 30000);
 
       const cb = (msg) => {
         clearTimeout(timeoutId);
+        this.pendingCallbacks.delete("msg");
         resolve(msg);
       };
+
+      // Check if there's a queued message first
+      if (this.messageQueue.length > 0) {
+        const queued = this.messageQueue.shift();
+        clearTimeout(timeoutId);
+        return resolve(queued);
+      }
 
       this.pendingCallbacks.set("msg", cb);
       this.socket.write(encodeFrame(message));
@@ -762,22 +776,29 @@ export class UdbSession {
       types = [types];
     }
 
+    // Check if message is already queued
+    for (let i = 0; i < this.messageQueue.length; i++) {
+      if (types.includes(this.messageQueue[i].type)) {
+        return this.messageQueue.splice(i, 1)[0];
+      }
+    }
+
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
+        this.pendingCallbacks.delete("wait");
         reject(new ConnectionError("Wait timeout"));
       }, timeoutMs);
 
       const cb = (msg) => {
         if (types.includes(msg.type)) {
           clearTimeout(timeoutId);
+          this.pendingCallbacks.delete("wait");
           resolve(msg);
-        } else {
-          // Continue waiting, put callback back
-          this.pendingCallbacks.set("msg", cb);
         }
+        // Otherwise, ignore this message and keep waiting
       };
 
-      this.pendingCallbacks.set("msg", cb);
+      this.pendingCallbacks.set("wait", cb);
     });
   }
 }
