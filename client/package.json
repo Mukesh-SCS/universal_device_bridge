@@ -1,0 +1,15 @@
+{
+  "name": "@udb/client",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Programmatic API for Universal Device Bridge",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./types": "./src/types.d.ts",
+    "./fleet": "./src/fleet.js"
+  },
+  "dependencies": {
+    "@udb/protocol": "0.1.0"
+  }
+}

@@ -2,8 +2,33 @@ import { Buffer } from "node:buffer";
 
 const MAX_FRAME_BYTES = 8 * 1024 * 1024; // 8MB hard cap to prevent memory DoS
 
+/**
+ * Recursively process an object and convert all Buffer instances to 
+ * { __buffer: true, data: base64 } format before JSON.stringify runs.
+ * This is needed because JSON.stringify calls toJSON() on objects before
+ * passing them to the replacer, so Buffers become { type: 'Buffer', data: [...] }.
+ */
+function serializeBuffers(obj) {
+  if (Buffer.isBuffer(obj)) {
+    return { __buffer: true, data: obj.toString("base64") };
+  }
+  if (obj === null || typeof obj !== "object") {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(item => serializeBuffers(item));
+  }
+  const result = {};
+  for (const key of Object.keys(obj)) {
+    result[key] = serializeBuffers(obj[key]);
+  }
+  return result;
+}
+
 export function encodeFrame(obj) {
-  const payload = Buffer.from(JSON.stringify(obj), "utf8");
+  // Convert Buffer objects to base64 for JSON serialization (pre-process)
+  const serializable = serializeBuffers(obj);
+  const payload = Buffer.from(JSON.stringify(serializable), "utf8");
   const header = Buffer.alloc(4);
   header.writeUInt32BE(payload.length, 0);
   return Buffer.concat([header, payload]);
@@ -33,7 +58,14 @@ export function createFrameDecoder(onMessage) {
 
       let msg;
       try {
-        msg = JSON.parse(payload);
+        // Convert base64 strings back to Buffers
+        const reviver = (key, value) => {
+          if (value && typeof value === "object" && value.__buffer === true) {
+            return Buffer.from(value.data, "base64");
+          }
+          return value;
+        };
+        msg = JSON.parse(payload, reviver);
       } catch {
         onMessage({ type: "error", error: "invalid_json" });
         continue;

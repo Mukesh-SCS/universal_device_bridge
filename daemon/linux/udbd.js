@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import { execFile } from "node:child_process";
+import pty from "node-pty";
 import { encodeFrame, createFrameDecoder } from "@udb/protocol/src/framing.js";
 import { MSG } from "@udb/protocol/src/messages.js";
 import { fingerprintPublicKeyPem, verifySignedNonce, ensureDir } from "@udb/protocol/src/crypto.js";
@@ -23,6 +24,14 @@ const TCP_PORT = Number(getArg("--tcp", "9910"));
 const UDP_PORT = Number(getArg("--udp", "9909"));
 const PAIRING = getArg("--pairing", "prompt"); // prompt | auto
 const DEVICE_NAME = getArg("--name", os.hostname());
+
+// Stream management (for services like shell)
+const openStreams = new Map(); // streamId -> { type, process, socket, ... }
+let nextStreamId = 1;
+
+function generateStreamId() {
+  return nextStreamId++;
+}
 
 // Security knobs
 const NO_EXEC = hasFlag("--no-exec");
@@ -346,6 +355,131 @@ const server = net.createServer((socket) => {
             }
             return;
         }
+
+      // Stream-based services
+      if (m.type === MSG.OPEN_SERVICE) {
+        const serviceName = String(m.service ?? "").trim();
+        const streamId = m.streamId || generateStreamId();
+
+        if (serviceName === "shell") {
+          try {
+            const shell = process.env.SHELL || (os.platform() === "win32" ? "cmd.exe" : "/bin/sh");
+            const shellArgs = os.platform() === "win32" ? [] : [];
+
+            const ptyProcess = pty.spawn(shell, shellArgs, {
+              name: "xterm-color",
+              cols: m.cols || 80,
+              rows: m.rows || 24,
+              cwd: process.cwd(),
+              env: process.env
+            });
+
+            const stream = {
+              type: "shell",
+              streamId,
+              process: ptyProcess,
+              socket
+            };
+
+            openStreams.set(streamId, stream);
+
+            // Stream data from PTY to client
+            ptyProcess.onData((data) => {
+              socket.write(
+                encodeFrame({
+                  type: MSG.STREAM_DATA,
+                  streamId,
+                  b64: data.toString("base64")
+                })
+              );
+            });
+
+            // Handle PTY exit
+            ptyProcess.onExit(() => {
+              openStreams.delete(streamId);
+              socket.write(
+                encodeFrame({
+                  type: MSG.STREAM_CLOSE,
+                  streamId
+                })
+              );
+            });
+
+            // Don't send initial message - let shell prompt appear naturally
+
+            log(`SHELL service opened streamId=${streamId}`);
+          } catch (err) {
+            socket.write(
+              encodeFrame({
+                type: MSG.SERVICE_ERROR,
+                streamId,
+                error: "shell_spawn_failed",
+                detail: err.message
+              })
+            );
+          }
+          return;
+        }
+
+        socket.write(
+          encodeFrame({
+            type: MSG.SERVICE_ERROR,
+            streamId,
+            error: "unknown_service",
+            detail: serviceName
+          })
+        );
+        return;
+      }
+
+      // Stream data handling (input from client)
+      if (m.type === MSG.STREAM_DATA) {
+        const streamId = m.streamId;
+        const stream = openStreams.get(streamId);
+
+        if (!stream) {
+          socket.write(
+            encodeFrame({
+              type: MSG.SERVICE_ERROR,
+              streamId,
+              error: "stream_not_found"
+            })
+          );
+          return;
+        }
+
+        if (stream.type === "shell") {
+          try {
+            const data = Buffer.from(m.b64 || "", "base64");
+            stream.process.write(data);
+          } catch (err) {
+            socket.write(
+              encodeFrame({
+                type: MSG.SERVICE_ERROR,
+                streamId,
+                error: "stream_write_failed",
+                detail: err.message
+              })
+            );
+          }
+        }
+        return;
+      }
+
+      // Stream resize
+      if (m.type === MSG.STREAM_RESIZE) {
+        const streamId = m.streamId;
+        const stream = openStreams.get(streamId);
+
+        if (stream && stream.type === "shell") {
+          try {
+            stream.process.resize(m.cols || 80, m.rows || 24);
+          } catch (err) {
+            log(`RESIZE failed: ${err.message}`);
+          }
+        }
+        return;
+      }
 
       if (m.type === MSG.EXEC) {
         if (NO_EXEC) {

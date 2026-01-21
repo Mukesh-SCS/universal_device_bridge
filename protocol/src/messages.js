@@ -26,7 +26,20 @@ export const MSG = {
   STATUS: "status",
   STATUS_RESULT: "status_result",
   LIST_PAIRED: "list_paired",
-  LIST_PAIRED_RESULT: "list_paired_result"
+  LIST_PAIRED_RESULT: "list_paired_result",
+  FILE_PUSH_START: "file_push_start",
+  FILE_PUSH_CHUNK: "file_push_chunk",
+  FILE_PUSH_END: "file_push_end",
+  FILE_PULL_START: "file_pull_start",
+  FILE_PULL_CHUNK: "file_pull_chunk",
+  FILE_PULL_END: "file_pull_end",
+  FILE_ERROR: "file_error",
+  // Streaming services
+  OPEN_SERVICE: "open_service",
+  STREAM_DATA: "stream_data",
+  STREAM_CLOSE: "stream_close",
+  STREAM_RESIZE: "stream_resize",
+  SERVICE_ERROR: "service_error"
 };
 
 export function hello({ clientName, pubKey }) {
