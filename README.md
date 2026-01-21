@@ -54,12 +54,12 @@ Communication is authenticated using cryptographic keypairs and explicit pairing
 
 **Linux / macOS:**
 ```bash
-curl -fsSL https://udb.dev/install.sh | sh
+curl -fsSL https://udb-core.pages.dev/install.sh | sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-irm https://udb.dev/install.ps1 | iex
+irm https://udb-core.pages.dev/install.ps1 | iex
 ```
 
 ### npm Install

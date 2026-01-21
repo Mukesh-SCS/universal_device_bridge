@@ -119,13 +119,7 @@ function buildForTarget(platform, outputDir) {
 
   const entryPoint = path.join(ROOT, "cli", "src", "udb.js");
 
-  const result = spawnSync("npx", [
-    "pkg",
-    entryPoint,
-    "--target", target,
-    "--output", outputPath,
-    "--compress", "GZip"
-  ], {
+  const result = spawnSync(`npx pkg ${entryPoint} --target ${target} --output ${outputPath} --compress GZip`, [], {
     cwd: ROOT,
     stdio: "inherit",
     shell: true

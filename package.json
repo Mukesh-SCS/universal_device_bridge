@@ -36,7 +36,8 @@
       "node20-macos-arm64",
       "node20-win-x64"
     ],
-    "outputPath": "dist"
+    "outputPath": "dist",
+    "bytecode": false
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

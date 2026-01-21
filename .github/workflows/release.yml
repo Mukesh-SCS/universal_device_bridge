@@ -1,238 +1,72 @@
-# GitHub Actions workflow for building and releasing UDB binaries
-#
-# Triggered by:
-#   - Push of version tags (v*)
-#   - Manual workflow dispatch
-#
-# Creates releases with:
-#   - Prebuilt binaries for Linux, macOS, Windows
-#   - SHA256 checksums
-#   - Changelog from tag annotation or CHANGELOG.md
-
-name: Release
+name: Build & Release UDB
 
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g., 0.5.0)'
-        required: true
-        type: string
-      prerelease:
-        description: 'Mark as prerelease'
-        required: false
-        type: boolean
-        default: false
+      - "v*.*.*"
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Build ${{ matrix.os }}
-    runs-on: ${{ matrix.runner }}
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: linux-x64
-            runner: ubuntu-latest
-            target: node20-linux-x64
-            artifact: udb-linux-x64
-          - os: linux-arm64
-            runner: ubuntu-latest
-            target: node20-linux-arm64
-            artifact: udb-linux-arm64
-          - os: macos-x64
-            runner: macos-13  # Intel
-            target: node20-macos-x64
-            artifact: udb-macos-x64
-          - os: macos-arm64
-            runner: macos-14  # Apple Silicon
-            target: node20-macos-arm64
-            artifact: udb-macos-arm64
-          - os: win-x64
-            runner: windows-latest
-            target: node20-win-x64
-            artifact: udb-win-x64.exe
+          - os: windows-latest
+            target: win-x64
+          - os: ubuntu-latest
+            target: linux-x64
+          - os: ubuntu-latest
+            target: linux-arm64
+          - os: macos-latest
+            target: macos-x64
+          - os: macos-latest
+            target: macos-arm64
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 20
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install CLI dependencies
-        run: npm ci
-        working-directory: cli
+      - run: npm install
 
       - name: Build binary
-        run: |
-          npx pkg cli/src/udb.js \
-            --target ${{ matrix.target }} \
-            --output dist/${{ matrix.artifact }} \
-            --compress GZip
+        run: node scripts/build-binaries.js --target ${{ matrix.target }}
 
-      - name: Generate checksum (Unix)
-        if: runner.os != 'Windows'
-        run: |
-          cd dist
-          sha256sum ${{ matrix.artifact }} > ${{ matrix.artifact }}.sha256
-
-      - name: Generate checksum (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          cd dist
-          $hash = (Get-FileHash ${{ matrix.artifact }} -Algorithm SHA256).Hash.ToLower()
-          "$hash  ${{ matrix.artifact }}" | Out-File -Encoding ascii ${{ matrix.artifact }}.sha256
-
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: |
-            dist/${{ matrix.artifact }}
-            dist/${{ matrix.artifact }}.sha256
-          retention-days: 1
+          name: udb-${{ matrix.target }}
+          path: dist/
 
   release:
-    name: Create Release
+    name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Download all artifacts
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          path: dist
-          merge-multiple: true
+          path: dist-all
 
-      - name: List artifacts
-        run: ls -la dist/
-
-      - name: Create combined checksums
+      - name: Assemble release assets
         run: |
-          cd dist
-          cat *.sha256 > SHA256SUMS
-          cat SHA256SUMS
+          mkdir dist
+          for d in dist-all/*; do
+            cp "$d"/* dist/
+          done
 
-      - name: Determine version
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
-            echo "tag=v${{ inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Generate release notes
-        id: notes
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          
-          # Try to extract from CHANGELOG.md
-          if [ -f CHANGELOG.md ]; then
-            # Extract section for this version
-            NOTES=$(awk "/^## \[?${VERSION}\]?/,/^## \[?[0-9]/" CHANGELOG.md | head -n -1)
-            if [ -n "$NOTES" ]; then
-              echo "notes<<EOF" >> $GITHUB_OUTPUT
-              echo "$NOTES" >> $GITHUB_OUTPUT
-              echo "EOF" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-          fi
-          
-          # Fallback to git log
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$PREV_TAG" ]; then
-            NOTES=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s" --no-merges)
-          else
-            NOTES="Initial release"
-          fi
-          
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: UDB ${{ steps.version.outputs.version }}
-          body: |
-            ## Installation
-            
-            ### Linux / macOS
-            ```bash
-            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install.sh | bash
-            ```
-            
-            ### Windows (PowerShell)
-            ```powershell
-            irm https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install.ps1 | iex
-            ```
-            
-            ### Manual Download
-            Download the appropriate binary for your platform from the assets below.
-            
-            ## Checksums
-            Verify your download:
-            ```bash
-            sha256sum -c SHA256SUMS
-            ```
-            
-            ## Changes
-            ${{ steps.notes.outputs.notes }}
-          draft: false
-          prerelease: ${{ inputs.prerelease || false }}
-          files: |
-            dist/udb-linux-x64
-            dist/udb-linux-arm64
-            dist/udb-macos-x64
-            dist/udb-macos-arm64
-            dist/udb-win-x64.exe
-            dist/SHA256SUMS
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  verify:
-    name: Verify Release
-    needs: release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download and verify
-        run: |
-          VERSION="${{ needs.release.outputs.version || github.ref_name }}"
-          VERSION="${VERSION#v}"
-          
-          echo "Verifying release artifacts..."
-          
-          # Download checksums
-          curl -fsSL "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/SHA256SUMS" -o SHA256SUMS
-          
-          # Download Linux binary
-          curl -fsSL "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/udb-linux-x64" -o udb-linux-x64
-          
-          # Verify checksum
-          sha256sum -c SHA256SUMS --ignore-missing
-          
-          # Test execution
-          chmod +x udb-linux-x64
-          ./udb-linux-x64 --version
-          
-          echo "✅ Release verified successfully"
+          files: dist/*
