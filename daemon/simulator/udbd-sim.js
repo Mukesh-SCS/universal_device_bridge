@@ -256,6 +256,21 @@ const server = net.createServer((socket) => {
 
         log(`HELLO from ${clientName}`);
 
+        // Protocol version negotiation (Phase 4)
+        const clientProtocol = m.protocol ?? 1; // Default to 1 for backward compat
+        const SUPPORTED_PROTOCOL = 1;
+        
+        if (clientProtocol > SUPPORTED_PROTOCOL) {
+          socket.write(encodeFrame({ 
+            type: MSG.ERROR, 
+            error: "unsupported_protocol", 
+            supported: [SUPPORTED_PROTOCOL], 
+            got: clientProtocol 
+          }));
+          socket.end();
+          return;
+        }
+
         if (!clientPubKey) {
           socket.write(encodeFrame({ type: MSG.ERROR, error: "missing_pubkey" }));
           socket.end();
@@ -330,6 +345,174 @@ const server = net.createServer((socket) => {
           socket.write(encodeFrame({ type: MSG.PAIR_DENIED }));
         }
         return;
+      }
+
+      // Pre-auth services: services and info (allowed without authentication)
+      if (m.type === MSG.OPEN_SERVICE) {
+        const serviceName = String(m.service ?? "").trim();
+        const streamId = m.streamId || crypto.randomBytes(8).toString("hex");
+
+        // "services" service - returns capabilities (pre-auth allowed)
+        if (serviceName === "services") {
+          const servicesPayload = {
+            type: "services",
+            services: {
+              shell: { pty: true, resize: true, simulated: true },
+              exec: { oneShot: true, simulated: true },
+              fs: { push: true, pull: true, simulated: true },
+              logs: { follow: true, simulated: true },
+              status: { requestResponse: true },
+              pairing: { mode: PAIRING },
+              services: { preAuth: true },
+              info: { preAuth: true },
+              ping: { preAuth: true },
+              shutdown: { requiresAuth: true, enabled: true },
+              restart: { requiresAuth: true, enabled: true }
+            }
+          };
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_DATA,
+            streamId,
+            b64: Buffer.from(JSON.stringify(servicesPayload)).toString("base64")
+          }));
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_CLOSE,
+            streamId
+          }));
+
+          log(`SERVICES query answered`);
+          return;
+        }
+
+        // "info" service - returns daemon metadata (pre-auth allowed)
+        if (serviceName === "info") {
+          const infoPayload = {
+            type: "info",
+            name: DEVICE_NAME,
+            version: "0.7.0",
+            build: "simulator",
+            platform: "linux",
+            arch: "x86_64",
+            deviceType: "simulator",
+            pairingMode: PAIRING,
+            execEnabled: true,
+            root: "/",
+            tcpPort: TCP_PORT,
+            udpPort: UDP_PORT,
+            protocol: 1,
+            simulator: true
+          };
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_DATA,
+            streamId,
+            b64: Buffer.from(JSON.stringify(infoPayload)).toString("base64")
+          }));
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_CLOSE,
+            streamId
+          }));
+
+          log(`INFO query answered`);
+          return;
+        }
+
+        // "ping" service - cheap health check (pre-auth allowed)
+        if (serviceName === "ping") {
+          const pingPayload = {
+            type: "pong",
+            time: Date.now(),
+            name: DEVICE_NAME,
+            uptime: process.uptime()
+          };
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_DATA,
+            streamId,
+            b64: Buffer.from(JSON.stringify(pingPayload)).toString("base64")
+          }));
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_CLOSE,
+            streamId
+          }));
+
+          log(`PING answered`);
+          return;
+        }
+
+        // "shutdown" service - requires auth
+        if (serviceName === "shutdown") {
+          if (!authed) {
+            socket.write(encodeFrame({
+              type: MSG.SERVICE_ERROR,
+              streamId,
+              error: "auth_required"
+            }));
+            return;
+          }
+
+          const shutdownPayload = {
+            type: "shutdown",
+            message: "Daemon shutting down",
+            time: Date.now()
+          };
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_DATA,
+            streamId,
+            b64: Buffer.from(JSON.stringify(shutdownPayload)).toString("base64")
+          }));
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_CLOSE,
+            streamId
+          }));
+
+          log(`SHUTDOWN requested by ${clientName}`);
+          
+          // Schedule shutdown after sending response
+          setTimeout(() => {
+            console.log("[SIM] Shutting down...");
+            process.exit(0);
+          }, 100);
+          return;
+        }
+
+        // "restart" service - requires auth
+        if (serviceName === "restart") {
+          if (!authed) {
+            socket.write(encodeFrame({
+              type: MSG.SERVICE_ERROR,
+              streamId,
+              error: "auth_required"
+            }));
+            return;
+          }
+
+          const restartPayload = {
+            type: "restart",
+            message: "Daemon restarting (simulated - no actual restart in simulator)",
+            time: Date.now()
+          };
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_DATA,
+            streamId,
+            b64: Buffer.from(JSON.stringify(restartPayload)).toString("base64")
+          }));
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_CLOSE,
+            streamId
+          }));
+
+          log(`RESTART requested by ${clientName} (simulated)`);
+          return;
+        }
       }
 
       // Require auth for remaining operations

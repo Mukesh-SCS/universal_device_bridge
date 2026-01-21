@@ -2,22 +2,33 @@
 
 Complete reference for the Universal Device Bridge programmatic API.
 
+## API Stability
+
+All APIs in this document are marked with stability levels:
+
+| Marker | Meaning |
+|--------|---------|
+| ✅ **Stable** | API is frozen, backward compatible changes only |
+| 🔶 **Beta** | API may change in minor versions |
+| ⚠️ **Internal** | Not for external use, may change without notice |
+
 ## Table of Contents
 
-1. [Discovery & Connection](#discovery--connection)
-2. [Core Operations](#core-operations)
-3. [Context Management](#context-management)
-4. [Sessions](#sessions)
-5. [Batch Operations](#batch-operations)
-6. [Fleet Management](#fleet-management)
-7. [Error Handling](#error-handling)
-8. [Configuration](#configuration)
+1. [Discovery & Connection](#discovery--connection) ✅
+2. [Core Operations](#core-operations) ✅
+3. [Context Management](#context-management) ✅
+4. [Sessions](#sessions) ✅
+5. [Batch Operations](#batch-operations) 🔶
+6. [Fleet Management](#fleet-management) ✅
+7. [Error Handling](#error-handling) ✅
+8. [Configuration](#configuration) ✅
+9. [Transport Layer](#transport-layer) 🔶
 
 ---
 
-## Discovery & Connection
+## Discovery & Connection ✅
 
-### `discoverDevices(timeoutMs?)`
+### `discoverDevices(timeoutMs?)` ✅
 
 Discover devices on the local network via UDP broadcast.
 

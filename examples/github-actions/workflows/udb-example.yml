@@ -1,0 +1,181 @@
+# UDB GitHub Actions Example
+#
+# This workflow demonstrates using UDB in a CI/CD pipeline.
+# It uses the simulator daemon for testing purposes.
+#
+# For real devices, replace the simulator with actual device targets
+# and ensure network connectivity from GitHub runners.
+
+name: UDB Integration Example
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "20"
+  DEVICE_TARGET: "127.0.0.1:19910"
+
+jobs:
+  # ========================================
+  # Smoke Test (Simulator)
+  # ========================================
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run smoke test
+        run: node ci/smoke-test.js
+        env:
+          UDB_TEST_PORT: "19910"
+
+  # ========================================
+  # Device Deployment Example
+  # ========================================
+  deploy:
+    name: Deploy to Device
+    runs-on: ubuntu-latest
+    # Only run on main branch
+    if: github.ref == 'refs/heads/main'
+    
+    # Example: deploy to a real device
+    # Uncomment and configure for actual use
+    # needs: smoke-test
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Start simulator (replace with real device in production)
+      - name: Start simulator daemon
+        run: |
+          node daemon/simulator/udbd-sim.js --tcp 19910 &
+          sleep 2
+
+      # Pair with device (first time only)
+      - name: Pair with device
+        run: node cli/src/udb.js pair ${{ env.DEVICE_TARGET }}
+
+      # Check device is ready
+      - name: Verify device connectivity
+        run: node cli/src/udb.js ping ${{ env.DEVICE_TARGET }}
+
+      # Get device info
+      - name: Get device info
+        id: device-info
+        run: |
+          info=$(node cli/src/udb.js info ${{ env.DEVICE_TARGET }} --json)
+          echo "Device info: $info"
+          echo "device_name=$(echo $info | jq -r '.name')" >> $GITHUB_OUTPUT
+          echo "device_version=$(echo $info | jq -r '.version')" >> $GITHUB_OUTPUT
+
+      # Run deployment command
+      - name: Deploy application
+        run: |
+          node cli/src/udb.js exec ${{ env.DEVICE_TARGET }} "echo 'Deploying version ${{ github.sha }}'"
+          # In real scenario:
+          # udb push ${{ env.DEVICE_TARGET }} ./build/app.bin /opt/myapp/app.bin
+          # udb exec ${{ env.DEVICE_TARGET }} "systemctl restart myapp"
+
+      # Verify deployment
+      - name: Verify deployment
+        run: |
+          node cli/src/udb.js exec ${{ env.DEVICE_TARGET }} "echo 'Deployment verified'"
+          # In real scenario:
+          # udb exec ${{ env.DEVICE_TARGET }} "systemctl is-active myapp"
+
+      # Collect logs on failure
+      - name: Collect device logs
+        if: failure()
+        run: |
+          node cli/src/udb.js exec ${{ env.DEVICE_TARGET }} "tail -100 /var/log/syslog" > device-logs.txt || true
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-logs
+          path: device-logs.txt
+
+  # ========================================
+  # Fleet Deployment Example
+  # ========================================
+  fleet-deploy:
+    name: Fleet Deployment
+    runs-on: ubuntu-latest
+    if: false  # Disabled by default - enable for real fleet deployments
+    
+    strategy:
+      matrix:
+        device:
+          - { name: "device-1", target: "10.0.0.1:9910" }
+          - { name: "device-2", target: "10.0.0.2:9910" }
+          - { name: "device-3", target: "10.0.0.3:9910" }
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup UDB keypair
+        run: |
+          mkdir -p ~/.udb
+          echo "${{ secrets.UDB_PRIVATE_KEY }}" > ~/.udb/id_ed25519
+          echo "${{ secrets.UDB_PUBLIC_KEY }}" > ~/.udb/id_ed25519.pub
+          chmod 600 ~/.udb/id_ed25519
+
+      - name: Deploy to ${{ matrix.device.name }}
+        run: |
+          echo "Deploying to ${{ matrix.device.name }} (${{ matrix.device.target }})"
+          node cli/src/udb.js ping ${{ matrix.device.target }}
+          node cli/src/udb.js exec ${{ matrix.device.target }} "systemctl restart myapp"
+
+  # ========================================
+  # Docker-based CI Example
+  # ========================================
+  docker-ci:
+    name: Docker CI
+    runs-on: ubuntu-latest
+    if: false  # Enable when Dockerfile is ready
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build UDB CI image
+        run: docker build -t udb-ci .
+
+      - name: Run smoke test in Docker
+        run: docker run --rm udb-ci node ci/smoke-test.js

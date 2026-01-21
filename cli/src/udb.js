@@ -10,6 +10,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import readline from "node:readline";
 import { spawn } from "node:child_process";
 
 import {
@@ -18,6 +19,8 @@ import {
   resolveTarget,
   probeTcp,
   status,
+  getServices,
+  getInfo,
   pair,
   unpair,
   listPaired,
@@ -53,13 +56,41 @@ import {
 const [, , cmd, ...rest] = process.argv;
 const UDB_DIR = path.join(os.homedir(), ".udb");
 const PID_FILE = path.join(UDB_DIR, "udbd.pid");
-const json = rest.includes("--json");
+const json = rest.includes("--json") || rest.includes("-j");
+
+/* ===================== Exit Codes ===================== */
+const EXIT = {
+  SUCCESS: 0,
+  ERROR: 1,
+  USAGE: 2
+};
 
 /* ===================== helpers ===================== */
 
-function die(msg) {
-  console.error(msg);
-  process.exit(1);
+/**
+ * Print error to stderr and exit with appropriate code.
+ * In JSON mode, outputs structured error object.
+ */
+function die(msg, exitCode = EXIT.ERROR) {
+  if (json) {
+    console.log(JSON.stringify({
+      success: false,
+      error: {
+        code: exitCode === EXIT.USAGE ? "USAGE_ERROR" : "ERROR",
+        message: msg
+      }
+    }, null, 2));
+  } else {
+    console.error(msg);
+  }
+  process.exit(exitCode);
+}
+
+/**
+ * Print usage error and exit with code 2.
+ */
+function usageError(msg) {
+  die(msg, EXIT.USAGE);
 }
 
 function hasFlag(name) {
@@ -80,24 +111,105 @@ function isRunning(pid) {
   }
 }
 
+/**
+ * Prompt user to select a device interactively.
+ * @param {Array} devices - List of discovered devices
+ * @returns {Promise<object>} Selected device
+ */
+async function promptDeviceSelection(devices) {
+  console.log("\nMultiple devices found:");
+  devices.forEach((d, i) => {
+    const name = d.name || "unknown";
+    const target = `${d.host}:${d.port}`;
+    console.log(`  [${i + 1}] ${name.padEnd(20)} ${target}`);
+  });
+  console.log("");
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) => {
+    rl.question("Select device [1]: ", (answer) => {
+      rl.close();
+      const idx = answer.trim() === "" ? 0 : parseInt(answer, 10) - 1;
+      if (isNaN(idx) || idx < 0 || idx >= devices.length) {
+        resolve(devices[0]); // Default to first
+      } else {
+        resolve(devices[idx]);
+      }
+    });
+  });
+}
+
+/**
+ * Resolve target with interactive device selection for TTY.
+ * If multiple devices found and running in TTY mode (not --json), prompt user.
+ * @param {string|object} maybeTarget - Optional explicit target
+ * @returns {Promise<object>} Resolved target { host, port }
+ */
+async function resolveTargetInteractive(maybeTarget) {
+  try {
+    return await resolveTarget(maybeTarget);
+  } catch (err) {
+    // Handle multiple devices case interactively
+    if (err.code === "AMBIGUOUS_TARGET" && process.stdout.isTTY && !json) {
+      const devices = await discoverDevices();
+      const selected = await promptDeviceSelection(devices);
+      
+      // Save as current context for convenience
+      addContext("default", {
+        host: selected.host,
+        port: selected.port,
+        name: selected.name || ""
+      });
+      setCurrentContext("default");
+      
+      return selected;
+    }
+    throw err;
+  }
+}
+
 function formatError(err) {
   if (err instanceof AuthError) {
-    return `Not authorized. Run: udb pair <ip>:<port>`;
+    return { 
+      message: `Device requires pairing.\nRun: udb pair <target>`, 
+      code: "AUTH_FAILED" 
+    };
   }
 
   if (err instanceof ConnectionError) {
-    return `Connection failed: ${err.message}`;
+    return { message: `Connection failed: ${err.message}`, code: "CONNECTION_FAILED" };
   }
 
   if (err instanceof CommandError) {
-    return `Command failed with exit code ${err.code}`;
+    return { message: `Command failed with exit code ${err.code}`, code: "COMMAND_FAILED" };
   }
 
   if (err instanceof UdbError) {
-    return `${err.code}: ${err.message}`;
+    return { message: `${err.code}: ${err.message}`, code: err.code };
   }
 
-  return `Error: ${err.message}`;
+  return { message: `Error: ${err.message}`, code: "ERROR" };
+}
+
+/**
+ * Handle error and exit with appropriate code.
+ * In JSON mode, outputs structured error object.
+ */
+function handleError(err) {
+  const { message, code } = formatError(err);
+  if (json) {
+    console.log(JSON.stringify({
+      success: false,
+      error: { code, message }
+    }, null, 2));
+  } else {
+    console.error(message);
+  }
+  process.exit(EXIT.ERROR);
 }
 
 /* ===================== daemon commands ===================== */
@@ -178,7 +290,88 @@ async function statusCmd() {
       console.log(`Paired clients: ${result.pairedCount}`);
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
+  }
+}
+
+async function servicesCmd() {
+  try {
+    let targetArg = undefined;
+    if (rest.length > 0 && rest[0].includes(":")) {
+      targetArg = rest[0];
+    }
+
+    const target = await resolveTarget(targetArg);
+    const result = await getServices(target);
+
+    if (json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log("Available services:");
+      for (const [name, caps] of Object.entries(result.services || {})) {
+        const capsStr = Object.entries(caps)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(", ");
+        console.log(`  ${name}: ${capsStr}`);
+      }
+    }
+  } catch (err) {
+    handleError(err);
+  }
+}
+
+async function infoCmd() {
+  try {
+    let targetArg = undefined;
+    if (rest.length > 0 && rest[0].includes(":")) {
+      targetArg = rest[0];
+    }
+
+    const target = await resolveTarget(targetArg);
+    const result = await getInfo(target);
+
+    if (json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(`Name: ${result.name}`);
+      console.log(`Type: ${result.deviceType || "unknown"}`);
+      console.log(`Version: ${result.version}`);
+      console.log(`Build: ${result.build}`);
+      console.log(`Platform: ${result.platform}`);
+      console.log(`Arch: ${result.arch}`);
+      console.log(`Protocol: ${result.protocol}`);
+      console.log(`Pairing mode: ${result.pairingMode}`);
+      console.log(`Exec enabled: ${result.execEnabled}`);
+      console.log(`TCP port: ${result.tcpPort}`);
+      console.log(`UDP port: ${result.udpPort}`);
+    }
+  } catch (err) {
+    handleError(err);
+  }
+}
+
+async function pingCmd() {
+  try {
+    let targetArg = undefined;
+    if (rest.length > 0 && rest[0].includes(":")) {
+      targetArg = rest[0];
+    }
+
+    const target = await resolveTarget(targetArg);
+    
+    // Import ping from client
+    const { ping } = await import("@udb/client");
+    const result = await ping(target);
+
+    if (json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(`✔ Pong from ${result.name}`);
+      console.log(`Latency: ${result.latencyMs}ms`);
+      console.log(`Uptime: ${Math.floor(result.uptime)}s`);
+    }
+  } catch (err) {
+    handleError(err);
   }
 }
 
@@ -202,7 +395,8 @@ async function devicesCmd() {
         name: d.name,
         context: ctx ? ctx[0] : null,
         online: true,
-        source: "udp"
+        source: "udp",
+        type: "unknown"
       });
     }
 
@@ -216,17 +410,28 @@ async function devicesCmd() {
           name: ctx.name || "",
           context: ctxName,
           online: false,
-          source: "context"
+          source: "context",
+          type: "unknown"
         });
       }
     }
 
-    // Probe online status for context-only devices
+    // Probe online status and fetch device type for online devices
     const deviceList = [...merged.values()];
     await Promise.all(
       deviceList.map(async (d) => {
         if (d.source === "context") {
           d.online = await probeTcp({ host: d.host, port: d.port });
+        }
+        // Try to get device info for online devices
+        if (d.online) {
+          try {
+            const info = await getInfo({ host: d.host, port: d.port });
+            d.type = info.deviceType || (info.simulator ? "simulator" : "unknown");
+            if (!d.name && info.name) d.name = info.name;
+          } catch {
+            // Info might require auth, just leave type as unknown
+          }
         }
       })
     );
@@ -238,6 +443,7 @@ async function devicesCmd() {
             host: d.host,
             port: d.port,
             name: d.name,
+            type: d.type,
             context: d.context,
             online: d.online,
             source: d.source
@@ -247,14 +453,19 @@ async function devicesCmd() {
         )
       );
     } else {
+      // Table-style output
+      console.log(`${"NAME".padEnd(16)} ${"TYPE".padEnd(16)} ${"TARGET".padEnd(24)} STATUS`);
+      console.log("─".repeat(70));
       for (const d of deviceList) {
-        const ctxInfo = d.context ? `  [context: ${d.context}]` : "";
-        const onlineStatus = d.online ? "  [online]" : "  [offline]";
-        console.log(`${d.host}:${d.port}  name=${d.name}${ctxInfo}${onlineStatus}`);
+        const name = (d.name || d.context || "-").substring(0, 15).padEnd(16);
+        const type = (d.type || "unknown").padEnd(16);
+        const target = `${d.host}:${d.port}`.padEnd(24);
+        const status = d.online ? "online" : "offline";
+        console.log(`${name} ${type} ${target} ${status}`);
       }
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
@@ -269,7 +480,7 @@ async function pairCmd() {
       console.log(`Paired OK fp=${result.fingerprint}`);
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
@@ -282,7 +493,7 @@ async function unpairCmd() {
     if (getFlagValue("--fp")) options.fingerprint = getFlagValue("--fp");
 
     if (options.all && options.fingerprint) {
-      die("Use only one of --all or --fp <fingerprint>");
+      usageError("Use only one of --all or --fp <fingerprint>");
     }
 
     const result = await unpair(target, options);
@@ -299,7 +510,7 @@ async function unpairCmd() {
       }
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
@@ -321,7 +532,7 @@ async function listPairedCmd() {
       }
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
@@ -339,10 +550,10 @@ async function execCmd() {
     }
 
     if (!command) {
-      die('Usage: exec [ip:port] "<cmd>"');
+      usageError('Usage: udb exec [ip:port] "<cmd>"');
     }
 
-    const target = await resolveTarget(targetArg);
+    const target = await resolveTargetInteractive(targetArg);
     const result = await exec(target, command);
 
     if (result.stdout) process.stdout.write(result.stdout);
@@ -352,7 +563,7 @@ async function execCmd() {
     if (err instanceof CommandError) {
       process.exit(err.code);
     }
-    die(formatError(err));
+    handleError(err);
   }
 }
 
@@ -368,7 +579,7 @@ async function shellCmd() {
       targetArg = undefined;
     }
 
-    const target = await resolveTarget(targetArg);
+    const target = await resolveTargetInteractive(targetArg);
     
     // Import streaming client
     const { createStreamingSession } = await import("@udb/client");
@@ -447,14 +658,14 @@ async function shellCmd() {
     if (restoreTerminal && process.stdin.isTTY) {
       process.stdin.setRawMode(false);
     }
-    die(`Shell failed: ${formatError(err)}`);
+    handleError(err);
   }
 }
 
 async function connectCmd() {
   try {
     if (!rest[0]) {
-      die("Usage: connect <ip:port | name>");
+      usageError("Usage: udb connect <ip:port | name>");
     }
 
     const arg = rest[0];
@@ -468,26 +679,49 @@ async function connectCmd() {
       const matches = devices.filter((d) => d.name === arg);
 
       if (matches.length === 0) {
-        die(`No device named "${arg}"`);
+        usageError(`No device named "${arg}"`);
       }
       if (matches.length > 1) {
-        die(`Multiple devices named "${arg}". Use ip:port.`);
+        usageError(`Multiple devices named "${arg}". Use ip:port.`);
       }
 
       target = matches[0];
     }
 
-    const result = await status(target);
+    // Verify device is reachable
+    const reachable = await probeTcp(target);
+    if (!reachable) {
+      die(`Cannot connect to ${target.host}:${target.port}`);
+    }
+
+    // Get device info
+    let deviceName = "";
+    try {
+      const info = await getInfo(target);
+      deviceName = info.name || "";
+    } catch {
+      // Info might require auth, continue anyway
+    }
+
+    // Save as default context (udb-style: connect sets current device)
+    addContext("default", {
+      host: target.host,
+      port: target.port,
+      name: deviceName
+    });
+    setCurrentContext("default");
 
     if (json) {
-      console.log(JSON.stringify({ target, result }, null, 2));
+      console.log(JSON.stringify({
+        success: true,
+        connected: `${target.host}:${target.port}`,
+        name: deviceName
+      }, null, 2));
     } else {
-      console.log(
-        `Connected to ${target.host}:${target.port}  name=${result.name}`
-      );
+      console.log(`connected to ${target.host}:${target.port}`);
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
@@ -510,7 +744,7 @@ async function configShowCmd() {
       }
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
@@ -545,14 +779,14 @@ async function contextListCmd() {
       }
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
 async function contextAddCmd() {
   try {
     if (rest.length < 3) {
-      die("Usage: context add <name> <ip:port | device-name>");
+      usageError("Usage: context add <name> <ip:port | device-name>");
     }
 
     const ctxName = rest[1];
@@ -565,15 +799,15 @@ async function contextAddCmd() {
     } else {
       const devices = await discoverDevices();
       if (devices.length === 0) {
-        die("No devices found (discovery unavailable)");
+        usageError("No devices found (discovery unavailable)");
       }
 
       const matches = devices.filter((d) => d.name === arg);
       if (matches.length === 0) {
-        die(`No device named "${arg}"`);
+        usageError(`No device named "${arg}"`);
       }
       if (matches.length > 1) {
-        die(`Multiple devices named "${arg}". Use ip:port.`);
+        usageError(`Multiple devices named "${arg}". Use ip:port.`);
       }
 
       target = matches[0];
@@ -604,21 +838,21 @@ async function contextAddCmd() {
       );
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
 async function contextUseCmd() {
   try {
     if (!rest[1]) {
-      die("Usage: context use <name>");
+      usageError("Usage: context use <name>");
     }
 
     const name = rest[1];
     const ctx = getContext(name);
 
     if (!ctx) {
-      die(`No such context "${name}"`);
+      usageError(`No such context "${name}"`);
     }
 
     const result = await status(ctx);
@@ -642,7 +876,7 @@ async function contextUseCmd() {
       );
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
@@ -668,14 +902,14 @@ async function groupListCmd() {
       }
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
 async function groupAddCmd() {
   try {
     if (rest.length < 3) {
-      die("Usage: group add <name> <ip:port> [<ip:port> ...]");
+      usageError("Usage: group add <name> <ip:port> [<ip:port> ...]");
     }
 
     const groupName = rest[1];
@@ -689,14 +923,14 @@ async function groupAddCmd() {
       console.log(`✓ Created group "${groupName}" with ${result.deviceCount} device(s)`);
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
 async function groupExecCmd() {
   try {
     if (rest.length < 3) {
-      die('Usage: group exec <name> "<cmd>"');
+      usageError('Usage: group exec <name> "<cmd>"');
     }
 
     const groupName = rest[1];
@@ -733,7 +967,7 @@ async function groupExecCmd() {
       }
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
@@ -759,14 +993,14 @@ async function inventoryCmd() {
       }
     }
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
 async function pushCmd() {
   try {
     if (rest.length < 2) {
-      die('Usage: udb push [ip:port] <local-path> <remote-path>');
+      usageError('Usage: udb push [ip:port] <local-path> <remote-path>');
     }
 
     // Check if first arg is a target
@@ -779,18 +1013,18 @@ async function pushCmd() {
       localPath = rest[1];
       remotePath = rest[2];
     } else {
-      target = await resolveTarget();
+      target = await resolveTargetInteractive();
       localPath = rest[0];
       remotePath = rest[1];
     }
 
     if (!localPath || !remotePath) {
-      die('Usage: udb push [ip:port] <local-path> <remote-path>');
+      usageError('Usage: udb push [ip:port] <local-path> <remote-path>');
     }
 
     // Check if local file exists
     if (!fs.existsSync(localPath)) {
-      die(`Local file not found: ${localPath}`);
+      usageError(`Local file not found: ${localPath}`);
     }
 
     const stats = fs.statSync(localPath);
@@ -800,14 +1034,14 @@ async function pushCmd() {
 
     console.log(`✓ Pushed ${result.bytes} bytes successfully`);
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
   }
 }
 
 async function pullCmd() {
   try {
     if (rest.length < 2) {
-      die('Usage: udb pull [ip:port] <remote-path> <local-path>');
+      usageError('Usage: udb pull [ip:port] <remote-path> <local-path>');
     }
 
     // Check if first arg is a target
@@ -820,13 +1054,13 @@ async function pullCmd() {
       remotePath = rest[1];
       localPath = rest[2];
     } else {
-      target = await resolveTarget();
+      target = await resolveTargetInteractive();
       remotePath = rest[0];
       localPath = rest[1];
     }
 
     if (!remotePath || !localPath) {
-      die('Usage: udb pull [ip:port] <remote-path> <local-path>');
+      usageError('Usage: udb pull [ip:port] <remote-path> <local-path>');
     }
 
     console.log(`Pulling ${remotePath} from ${target} to ${localPath}...`);
@@ -835,7 +1069,164 @@ async function pullCmd() {
 
     console.log(`✓ Pulled ${result.bytes} bytes successfully to ${localPath}`);
   } catch (err) {
-    die(formatError(err));
+    handleError(err);
+  }
+}
+
+/* ===================== doctor command ===================== */
+
+async function doctorCmd() {
+  const checks = [];
+  const isFirstRun = hasFlag("--first-run");
+  let targetArg = rest.find(r => r.includes(":") && !r.startsWith("--"));
+
+  if (isFirstRun) {
+    console.log("🚀 UDB First-Run Setup\n");
+    console.log("Welcome to UDB! Let's make sure everything is ready.\n");
+  } else {
+    console.log("🔍 UDB Doctor - Diagnosing connectivity and configuration\n");
+  }
+
+  // Check 1: Local config
+  console.log("1. Checking local configuration...");
+  try {
+    const configDir = path.join(os.homedir(), ".udb");
+    if (fs.existsSync(configDir)) {
+      checks.push({ name: "Config directory", status: "ok", detail: configDir });
+      console.log(`   ✓ Config directory exists: ${configDir}`);
+    } else {
+      checks.push({ name: "Config directory", status: "warning", detail: "Not created yet" });
+      console.log(`   ⚠ Config directory not found (will be created on first use)`);
+    }
+  } catch (err) {
+    checks.push({ name: "Config directory", status: "error", detail: err.message });
+    console.log(`   ✗ Config directory check failed: ${err.message}`);
+  }
+
+  // Check 2: Client keypair
+  console.log("2. Checking client keypair...");
+  try {
+    const keyDir = path.join(os.homedir(), ".udb");
+    const pubKeyPath = path.join(keyDir, "id_ed25519.pub");
+    const privKeyPath = path.join(keyDir, "id_ed25519");
+
+    if (fs.existsSync(pubKeyPath) && fs.existsSync(privKeyPath)) {
+      checks.push({ name: "Client keypair", status: "ok", detail: pubKeyPath });
+      console.log(`   ✓ Client keypair found`);
+    } else if (isFirstRun) {
+      // Auto-generate keys on first run
+      console.log(`   ⚠ No keypair found. Generating...`);
+      const { loadOrCreateClientKeypair, fingerprintPublicKeyPem } = await import("@udb/protocol/src/crypto.js");
+      const { publicKeyPem } = loadOrCreateClientKeypair();
+      const fp = fingerprintPublicKeyPem(publicKeyPem);
+      checks.push({ name: "Client keypair", status: "ok", detail: `Generated, fingerprint: ${fp}` });
+      console.log(`   ✓ Keypair generated! Fingerprint: ${fp}`);
+    } else {
+      checks.push({ name: "Client keypair", status: "warning", detail: "Not created yet" });
+      console.log(`   ⚠ Client keypair not found (will be created on first operation)`);
+    }
+  } catch (err) {
+    checks.push({ name: "Client keypair", status: "error", detail: err.message });
+    console.log(`   ✗ Keypair check failed: ${err.message}`);
+  }
+
+  // Check 3: Contexts
+  console.log("3. Checking contexts...");
+  try {
+    const contexts = getContexts();
+    const count = Object.keys(contexts).length;
+    const currentCtx = getCurrentContextName();
+
+    if (count > 0) {
+      checks.push({ name: "Contexts", status: "ok", detail: `${count} contexts, current: ${currentCtx || "none"}` });
+      console.log(`   ✓ ${count} context(s) configured, current: ${currentCtx || "(none)"}`);
+    } else {
+      checks.push({ name: "Contexts", status: "info", detail: "No contexts saved" });
+      console.log(`   ℹ No contexts saved yet`);
+    }
+  } catch (err) {
+    checks.push({ name: "Contexts", status: "error", detail: err.message });
+    console.log(`   ✗ Context check failed: ${err.message}`);
+  }
+
+  // Check 4: Target resolution
+  console.log("4. Resolving target...");
+  let target = null;
+  try {
+    target = await resolveTarget(targetArg);
+    checks.push({ name: "Target resolution", status: "ok", detail: `${target.host}:${target.port}` });
+    console.log(`   ✓ Target resolved: ${target.host}:${target.port}`);
+  } catch (err) {
+    checks.push({ name: "Target resolution", status: "error", detail: err.message });
+    console.log(`   ✗ Target resolution failed: ${err.message}`);
+    if (!targetArg) {
+      console.log(`      Hint: Provide a target with: udb doctor <ip:port>`);
+    }
+  }
+
+  // Check 5: TCP connectivity
+  if (target) {
+    console.log("5. Testing TCP connectivity...");
+    try {
+      const reachable = await probeTcp(target);
+      if (reachable) {
+        checks.push({ name: "TCP connectivity", status: "ok", detail: `${target.host}:${target.port}` });
+        console.log(`   ✓ TCP port reachable: ${target.host}:${target.port}`);
+      } else {
+        checks.push({ name: "TCP connectivity", status: "error", detail: "Connection refused" });
+        console.log(`   ✗ TCP connection refused`);
+      }
+    } catch (err) {
+      checks.push({ name: "TCP connectivity", status: "error", detail: err.message });
+      console.log(`   ✗ TCP connectivity failed: ${err.message}`);
+    }
+
+    // Check 6: Device info (pre-auth)
+    console.log("6. Querying device info...");
+    try {
+      const info = await getInfo(target);
+      checks.push({ name: "Device info", status: "ok", detail: `${info.name} v${info.version}` });
+      console.log(`   ✓ Device: ${info.name} v${info.version} (protocol ${info.protocol})`);
+      console.log(`      Platform: ${info.platform}/${info.arch}`);
+      console.log(`      Pairing mode: ${info.pairingMode}`);
+    } catch (err) {
+      checks.push({ name: "Device info", status: "error", detail: err.message });
+      console.log(`   ✗ Device info query failed: ${err.message}`);
+    }
+
+    // Check 7: Authentication
+    console.log("7. Checking authentication...");
+    try {
+      const statusResult = await status(target);
+      checks.push({ name: "Authentication", status: "ok", detail: "Authenticated" });
+      console.log(`   ✓ Authenticated successfully`);
+      console.log(`      Paired clients on device: ${statusResult.pairedCount}`);
+    } catch (err) {
+      if (err instanceof AuthError) {
+        checks.push({ name: "Authentication", status: "warning", detail: "Not paired" });
+        console.log(`   ⚠ Not paired with this device`);
+        console.log(`      Fix: udb pair ${target.host}:${target.port}`);
+      } else {
+        checks.push({ name: "Authentication", status: "error", detail: err.message });
+        console.log(`   ✗ Authentication check failed: ${err.message}`);
+      }
+    }
+  }
+
+  // Summary
+  console.log("\n📋 Summary:");
+  const errorCount = checks.filter(c => c.status === "error").length;
+  const warningCount = checks.filter(c => c.status === "warning").length;
+  const okCount = checks.filter(c => c.status === "ok").length;
+
+  if (errorCount === 0 && warningCount === 0) {
+    console.log(`   ✓ All ${okCount} checks passed!`);
+  } else {
+    console.log(`   ${okCount} passed, ${warningCount} warnings, ${errorCount} errors`);
+  }
+
+  if (json) {
+    console.log("\n" + JSON.stringify({ checks, summary: { ok: okCount, warnings: warningCount, errors: errorCount } }, null, 2));
   }
 }
 
@@ -850,6 +1241,10 @@ async function main() {
   if (cmd === "push") return pushCmd();
   if (cmd === "pull") return pullCmd();
   if (cmd === "status") return statusCmd();
+  if (cmd === "services") return servicesCmd();
+  if (cmd === "info") return infoCmd();
+  if (cmd === "ping") return pingCmd();
+  if (cmd === "doctor") return doctorCmd();
   if (cmd === "list-paired") return listPairedCmd();
   if (cmd === "daemon" && rest[0] === "start") return daemonStart();
   if (cmd === "daemon" && rest[0] === "stop") return daemonStop();
@@ -864,50 +1259,68 @@ async function main() {
   if (cmd === "group" && rest[0] === "exec") return groupExecCmd();
   if (cmd === "inventory") return inventoryCmd();
 
-  console.log(`Universal Device Bridge (UDB) CLI
+  // udb-compatible aliases
+  if (cmd === "start-server") return daemonStart();
+  if (cmd === "kill-server") return daemonStop();
+
+  console.log(`Universal Device Bridge (UDB) v0.7.0
+udb-style device access for embedded systems, MCUs, and simulators.
 
 Usage:
-  udb devices [--json]
-  udb status [ip:port] [--json]
-  udb pair <ip:port>
-  udb unpair <ip:port> [--all | --fp <fingerprint>]
-  udb shell [ip:port]
-  udb exec [ip:port] "<cmd>"
-  udb push [ip:port] <local-path> <remote-path>
-  udb pull [ip:port] <remote-path> <local-path>
-  udb list-paired <ip:port> [--json]
-  udb connect <ip:port | device-name>
-  udb context list [--json]
-  udb context add <name> <ip:port | device-name>
-  udb context use <name>
-  udb config show [--json]
-  udb daemon start|stop|status
+  udb devices                       Discover devices on the network
+  udb connect <target>              Connect to device (sets as default)
+  udb shell                         Interactive shell
+  udb exec "<cmd>"                  Run command
+  udb push <src> <dst>              Push file to device
+  udb pull <src> <dst>              Pull file from device
+
+Device Management:
+  udb status [target]               Get device status
+  udb info [target]                 Get device info
+  udb ping [target]                 Check device connectivity
+  udb doctor [target]               Diagnose connection issues
+  udb pair <target>                 Pair with a device
+  udb unpair <target> [--all|--fp]  Unpair from a device
+  udb list-paired <target>          List paired clients
+
+Context Management:
+  udb context list                  List saved contexts
+  udb context add <name> <target>   Save a named context
+  udb context use <name>            Set current context
 
 Fleet Management:
-  udb group list [--json]
-  udb group add <name> <ip:port> [<ip:port> ...]
-  udb group exec <name> "<cmd>"
-  udb inventory [--json]
+  udb group list                    List device groups
+  udb group add <name> <targets...> Create a group
+  udb group exec <name> "<cmd>"     Run command on group
+  udb inventory                     Export fleet inventory
 
-Examples:
-  udb devices
-  udb pair 192.168.1.100:9910
-  udb shell
-  udb shell 192.168.1.100:9910
-  udb exec "whoami"
-  udb exec 192.168.1.100:9910 "ls /tmp"
-  udb push 192.168.1.100:9910 /tmp/local.txt /tmp/remote.txt
-  udb pull 192.168.1.100:9910 /tmp/remote.txt /tmp/local.txt
-  udb context add lab 192.168.1.100:9910
-  udb context use lab
-  udb group add lab 192.168.1.100:9910 192.168.1.101:9910
-  udb group exec lab "uname -a"
-  udb inventory --json
+Configuration:
+  udb config show                   Show current config
+  udb daemon start|stop|status      Manage local daemon
+  udb start-server                  Alias for 'daemon start'
+  udb kill-server                   Alias for 'daemon stop'
 
-For programmatic use, import @udb/client:
-  import { exec, status, pair, push, pull } from "@udb/client";
-  import { createGroup, execOnGroup } from "@udb/client/fleet";
+Target Formats:
+  ip:port                           TCP connection (192.168.1.100:9910)
+  tcp://ip:port                     Explicit TCP URL
+  serial://path?baud=115200         Serial connection (MCU)
+  device-name                       Discover by name
+
+Flags:
+  --json, -j                        Output in JSON format
+
+Exit Codes:
+  0 = success, 1 = error, 2 = usage error
+
+Quick Start:
+  udb connect 192.168.1.100:9910    # Connect to device
+  udb shell                          # Open shell
+  udb exec "ls /tmp"                 # Run command
+  udb push ./app /opt/app            # Deploy file
+
+For more information, visit:
+Documentation: https://github.com/your-org/universal-device-bridge
 `);
 }
 
-main().catch((err) => die(formatError(err)));
+main().catch((err) => handleError(err));

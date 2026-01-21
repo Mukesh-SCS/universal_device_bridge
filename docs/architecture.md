@@ -1,6 +1,6 @@
 # UDB Architecture
 
-Universal Device Bridge is designed as a **local-first, offline-capable** device access system inspired by Android Debug Bridge (ADB), but targeting non-Android devices.
+Universal Device Bridge is designed as a **local-first, offline-capable** device access system inspired by Android Debug Bridge (udb), but targeting non-Android devices.
 
 ---
 

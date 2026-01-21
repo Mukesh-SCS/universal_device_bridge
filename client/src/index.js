@@ -19,6 +19,9 @@ import {
   signNonce
 } from "@udb/protocol/src/crypto.js";
 
+// Transport layer
+import { TcpTransport, createTcpTransport, SerialTransport, createSerialTransport, parseSerialTarget } from "./transport/index.js";
+
 const CONFIG_FILE = path.join(os.homedir(), ".udb", "config.json");
 
 /* ===================== Config Management ===================== */
@@ -223,6 +226,10 @@ export async function probeTcp(target, timeoutMs = 400) {
 /**
  * Send TCP request to device and handle protocol
  * @private
+ * @param {Object} target - Target with host and port
+ * @param {Array} messages - Messages to send after auth
+ * @param {Object} options - Request options
+ * @param {Transport} [options.transport] - Optional transport (defaults to TcpTransport)
  */
 async function tcpRequest(target, messages, options = {}) {
   const {
@@ -230,13 +237,16 @@ async function tcpRequest(target, messages, options = {}) {
     keepOpen = false,
     preAuth = false,
     timeoutMs = 10000,
-    ignoreTerminalTypes = []  // Types to ignore as terminal (e.g., AUTH_REQUIRED during pairing)
+    ignoreTerminalTypes = [],  // Types to ignore as terminal (e.g., AUTH_REQUIRED during pairing)
+    transport = null           // Optional custom transport
   } = options;
 
   const { publicKeyPem } = loadOrCreateClientKeypair();
 
-  return new Promise((resolve, reject) => {
-    const sock = net.createConnection(target);
+  // Use provided transport or create TcpTransport
+  const sock = transport || createTcpTransport(target, { timeout: timeoutMs });
+
+  return new Promise(async (resolve, reject) => {
     let sent = false;
     let timedOut = false;
 
@@ -297,7 +307,10 @@ async function tcpRequest(target, messages, options = {}) {
         MSG.PULL_END,
         MSG.FILE_PUSH_END,
         MSG.FILE_PULL_END,
-        MSG.FILE_ERROR
+        MSG.FILE_ERROR,
+        MSG.STREAM_DATA,      // For service queries
+        MSG.STREAM_CLOSE,     // For service stream end
+        MSG.SERVICE_ERROR     // For service errors
       ];
 
       // Skip ignored terminal types (they're informational, not final)
@@ -312,22 +325,9 @@ async function tcpRequest(target, messages, options = {}) {
       }
     });
 
-    sock.on("connect", () => {
-      sock.write(
-        encodeFrame({
-          type: MSG.HELLO,
-          clientName: "udb-client",
-          pubKey: publicKeyPem
-        })
-      );
-
-      if (preAuth) {
-        sendQueued();
-      }
-    });
-
-    sock.on("data", decoder);
-    sock.on("error", (err) => {
+    // Set up transport callbacks
+    sock.onData(decoder);
+    sock.onError((err) => {
       clearTimeout(timeout);
       if (!timedOut) {
         reject(
@@ -338,6 +338,32 @@ async function tcpRequest(target, messages, options = {}) {
         );
       }
     });
+
+    // Connect and send HELLO
+    try {
+      await sock.connect();
+      
+      sock.write(
+        encodeFrame({
+          type: MSG.HELLO,
+          clientName: "udb-client",
+          pubKey: publicKeyPem,
+          protocol: 1
+        })
+      );
+
+      if (preAuth) {
+        sendQueued();
+      }
+    } catch (err) {
+      clearTimeout(timeout);
+      reject(
+        new ConnectionError(err.message, {
+          target,
+          originalError: err.code || err.message
+        })
+      );
+    }
   });
 }
 
@@ -368,6 +394,124 @@ export async function status(target) {
 
   if (res.msg?.type === MSG.ERROR) {
     throw new UdbError(res.msg.error, "DEVICE_ERROR");
+  }
+
+  throw new UdbError("Unexpected response", "PROTOCOL_ERROR");
+}
+
+/**
+ * Get device services/capabilities (pre-auth allowed)
+ * @param {object} target - Target { host, port }
+ * @returns {Promise<object>} Services object with capabilities
+ */
+export async function getServices(target) {
+  target = typeof target === "string" ? parseTarget(target) : target;
+
+  const { publicKeyPem } = loadOrCreateClientKeypair();
+  const streamId = Math.floor(Math.random() * 1000000);
+
+  const res = await tcpRequest(target, [{ 
+    type: MSG.OPEN_SERVICE, 
+    service: "services",
+    streamId 
+  }], {
+    preAuth: true,
+    ignoreTerminalTypes: [MSG.AUTH_REQUIRED]
+  });
+
+  if (res.msg?.type === MSG.STREAM_DATA) {
+    try {
+      const data = Buffer.from(res.msg.b64 || "", "base64").toString("utf8");
+      return JSON.parse(data);
+    } catch {
+      throw new UdbError("Failed to parse services response", "PROTOCOL_ERROR");
+    }
+  }
+
+  if (res.msg?.type === MSG.SERVICE_ERROR) {
+    throw new UdbError(res.msg.error || "Service error", "SERVICE_ERROR");
+  }
+
+  throw new UdbError("Unexpected response", "PROTOCOL_ERROR");
+}
+
+/**
+ * Get device info/metadata (pre-auth allowed)
+ * @param {object} target - Target { host, port }
+ * @returns {Promise<object>} Info object with daemon metadata
+ */
+export async function getInfo(target) {
+  target = typeof target === "string" ? parseTarget(target) : target;
+
+  const { publicKeyPem } = loadOrCreateClientKeypair();
+  const streamId = Math.floor(Math.random() * 1000000);
+
+  const res = await tcpRequest(target, [{ 
+    type: MSG.OPEN_SERVICE, 
+    service: "info",
+    streamId 
+  }], {
+    preAuth: true,
+    ignoreTerminalTypes: [MSG.AUTH_REQUIRED]
+  });
+
+  if (res.msg?.type === MSG.STREAM_DATA) {
+    try {
+      const data = Buffer.from(res.msg.b64 || "", "base64").toString("utf8");
+      return JSON.parse(data);
+    } catch {
+      throw new UdbError("Failed to parse info response", "PROTOCOL_ERROR");
+    }
+  }
+
+  if (res.msg?.type === MSG.SERVICE_ERROR) {
+    throw new UdbError(res.msg.error || "Service error", "SERVICE_ERROR");
+  }
+
+  throw new UdbError("Unexpected response", "PROTOCOL_ERROR");
+}
+
+/**
+ * Ping a device for health check (pre-auth)
+ * Returns latency and device info
+ * @param {object|string} target - Target { host, port } or string
+ * @returns {Promise<object>} Ping result { pong, latencyMs, name, uptime }
+ */
+export async function ping(target) {
+  target = typeof target === "string" ? parseTarget(target) : target;
+
+  const streamId = Math.floor(Math.random() * 1000000);
+  const start = Date.now();
+
+  const res = await tcpRequest(target, [{ 
+    type: MSG.OPEN_SERVICE, 
+    service: "ping",
+    streamId 
+  }], {
+    preAuth: true,
+    ignoreTerminalTypes: [MSG.AUTH_REQUIRED]
+  });
+
+  const latencyMs = Date.now() - start;
+
+  if (res.msg?.type === MSG.STREAM_DATA) {
+    try {
+      const data = Buffer.from(res.msg.b64 || "", "base64").toString("utf8");
+      const payload = JSON.parse(data);
+      return {
+        pong: true,
+        latencyMs,
+        name: payload.name,
+        uptime: payload.uptime,
+        time: payload.time
+      };
+    } catch {
+      throw new UdbError("Failed to parse ping response", "PROTOCOL_ERROR");
+    }
+  }
+
+  if (res.msg?.type === MSG.SERVICE_ERROR) {
+    throw new UdbError(res.msg.error || "Service error", "SERVICE_ERROR");
   }
 
   throw new UdbError("Unexpected response", "PROTOCOL_ERROR");
@@ -608,12 +752,18 @@ class Stream {
       throw new UdbError("Stream is closed", "STREAM_CLOSED");
     }
 
-    const dataStr = typeof data === "string" ? data : Buffer.from(data).toString("base64");
+    // Always convert to base64 for transmission
+    const b64Data = typeof data === "string" 
+      ? Buffer.from(data).toString("base64") 
+      : Buffer.isBuffer(data)
+        ? data.toString("base64")
+        : Buffer.from(String(data)).toString("base64");
+    
     this.session.socket.write(
       encodeFrame({
         type: MSG.STREAM_DATA,
         streamId: this.streamId,
-        b64: dataStr
+        b64: b64Data
       })
     );
   }
@@ -801,7 +951,8 @@ export class UdbSession {
           encodeFrame({
             type: MSG.HELLO,
             clientName: "udb-client-session",
-            pubKey: publicKeyPem
+            pubKey: publicKeyPem,
+            protocol: 1
           })
         );
       });
@@ -1208,12 +1359,18 @@ export async function createStreamingSession(target) {
   return createSession(target);
 }
 
+// Re-export transport classes for custom transport implementations
+export { Transport, TcpTransport, createTcpTransport, SerialTransport, createSerialTransport, parseSerialTarget } from "./transport/index.js";
+
 export default {
   discoverDevices,
   parseTarget,
   resolveTarget,
   probeTcp,
   status,
+  getServices,
+  getInfo,
+  ping,
   pair,
   unpair,
   listPaired,
@@ -1236,5 +1393,11 @@ export default {
   ConnectionError,
   CommandError,
   getConfig,
-  setConfig
+  setConfig,
+  // Transport layer
+  TcpTransport,
+  createTcpTransport,
+  SerialTransport,
+  createSerialTransport,
+  parseSerialTarget
 };

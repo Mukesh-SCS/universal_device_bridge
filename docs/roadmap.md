@@ -7,7 +7,7 @@ Evolution of Universal Device Bridge from local-first tool to scriptable platfor
 ## v1: Initial Release (Phase 1)
 ✅ **COMPLETE**
 
-- Host-side CLI (adb-style client)
+- Host-side CLI (udb-style client)
 - Linux daemon
 - Simulator daemon
 - USB and TCP transport support
@@ -68,7 +68,44 @@ Evolution of Universal Device Bridge from local-first tool to scriptable platfor
 
 ---
 
-## v4: Optional Features (Future)
+## v4: Hardening & Extensibility (Phase 4)
+✅ **COMPLETE**
+
+### Protocol Version Negotiation
+- ✅ HELLO includes protocol version (v1)
+- ✅ Daemon validates and rejects unsupported versions
+- ✅ Backward compatible (missing = v1)
+
+### Service Discovery
+- ✅ `udb services` - Query device capabilities
+- ✅ Pre-auth access (no pairing required)
+- ✅ JSON output support
+
+### Daemon Info
+- ✅ `udb info` - Query daemon metadata
+- ✅ Shows version, platform, protocol, ports
+- ✅ Pre-auth access
+
+### Transport Abstraction
+- ✅ Abstract Transport interface in client
+- ✅ TcpTransport implementation
+- ✅ Foundation for USB/Serial transports
+- ✅ Exported for custom implementations
+
+### Diagnostics
+- ✅ `udb doctor` command
+- ✅ Config, keys, connectivity checks
+- ✅ Actionable hints for failures
+
+### No Scope Creep
+- ✅ No cloud features
+- ✅ No GUI
+- ✅ No orchestration
+- ✅ All 79 tests pass
+
+---
+
+## v5: Optional Features (Future)
 
 ### Optional Cloud Augmentation (Strictly Opt-In)
 - Remote discovery relay (helpers, not required)
