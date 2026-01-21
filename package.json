@@ -7,5 +7,16 @@
     "client",
     "cli",
     "daemon/linux"
-  ]
+  ],
+  "scripts": {
+    "test": "node --test",
+    "test:protocol": "node --test protocol/test/*.test.js",
+    "test:client": "node --test client/test/*.test.js",
+    "test:cli": "node --test cli/test/*.test.js",
+    "test:all": "node --test protocol/test/*.test.js client/test/*.test.js cli/test/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
 }

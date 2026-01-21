@@ -11,50 +11,84 @@ npm install @udb/client
 ## Quick Start
 
 ```javascript
-import { discoverDevices, connect, exec } from "@udb/client";
+import { discoverDevices, exec, status, createSession } from "@udb/client";
 
 // Discover devices on the network
 const devices = await discoverDevices();
-console.log(devices); // [{ host: "192.168.1.100", port: 9910, name: "device1", ... }]
+console.log(devices); // [{ host: "192.168.1.100", port: 9910, name: "device1" }]
 
-// Connect to a device
-const client = await connect("192.168.1.100:9910");
-
-// Execute a command
-const result = await exec(client, "whoami");
+// Execute a command (one-shot, auto-connects)
+const result = await exec("192.168.1.100:9910", "whoami");
 console.log(result.stdout); // "user\n"
+
+// Or use a session for multiple operations
+const session = await createSession("192.168.1.100:9910");
+const r1 = await session.exec("hostname");
+const r2 = await session.exec("uptime");
+await session.close();
 ```
 
 ## API Reference
 
-### Discovery & Connection
+### Discovery & Target Resolution
 
 - `discoverDevices(timeoutMs)` - Discover devices via UDP broadcast
-- `connect(target, options)` - Connect to a device, returns connection object
-- `closeConnection(conn)` - Close a connection
+- `parseTarget(arg)` - Parse "ip:port" or "tcp://host:port" string
+- `resolveTarget(maybeTarget)` - Resolve target from arg, context, or discovery
+- `probeTcp(target, timeoutMs)` - Test TCP connectivity
 
-### Core Operations
+### Core Operations (One-Shot)
 
-- `pair(conn)` - Pair with a device
-- `unpair(conn, options)` - Unpair from a device
-- `exec(conn, command)` - Execute a command on device
-- `status(conn)` - Get device status
-- `logs(conn, options)` - Stream device logs
-- `push(conn, local, remote)` - Push file to device
-- `pull(conn, remote, local)` - Pull file from device
-- `listPaired(conn)` - List paired clients on device
+- `pair(target)` - Pair with a device
+- `unpair(target, options)` - Unpair from a device
+- `exec(target, command)` - Execute a command on device
+- `status(target)` - Get device status
+- `push(target, localPath, remotePath)` - Push file to device
+- `pull(target, remotePath, localPath)` - Pull file from device
+- `listPaired(target)` - List paired clients on device
 
-### Sessions
+### Sessions (Persistent Connection)
 
-- `createSession(target, options)` - Create a persistent session
-- `UdbSession.exec(command)` - Execute in session
-- `UdbSession.push(local, remote)` - Push in session
+- `createSession(target)` - Create a persistent session
+- `createStreamingSession(target)` - Alias for createSession (streaming support)
+- `UdbSession.exec(command)` - Execute command in session
+- `UdbSession.status()` - Get status in session
+- `UdbSession.openService(name, options)` - Open streaming service (e.g., shell)
 - `UdbSession.close()` - Close session
 
-### Advanced
+### Context Management
+
+- `getContexts()` - Get all saved contexts
+- `getCurrentContextName()` - Get current context name
+- `setCurrentContext(name)` - Switch to a context
+- `addContext(name, target)` - Save a new context
+- `getContext(name)` - Get context by name
+- `removeContext(name)` - Remove a context
+
+### Batch Operations
 
 - `execBatch(targets, command, options)` - Run command on multiple devices
-- `createWorkflow(steps)` - Define a multi-step workflow
+
+## Fleet Management
+
+Import fleet functions separately:
+
+```javascript
+import { createGroup, execOnGroup, findByLabels } from "@udb/client/fleet";
+
+// Create a device group
+createGroup("lab", [
+  { host: "192.168.1.100", port: 9910 },
+  { host: "192.168.1.101", port: 9910 }
+]);
+
+// Execute on entire group
+const results = await execOnGroup("lab", "hostname");
+
+// Label devices and query by label
+setLabels({ host: "192.168.1.100", port: 9910 }, { env: "prod", role: "web" });
+const prodDevices = findByLabels({ env: "prod" });
+```
 
 ## Examples
 
@@ -65,11 +99,18 @@ See `examples/` folder for real-world usage patterns.
 All API functions throw descriptive errors:
 
 ```javascript
+import { exec, AuthError, ConnectionError, CommandError } from "@udb/client";
+
 try {
-  await exec(conn, "false");
+  await exec("192.168.1.100:9910", "false");
 } catch (err) {
-  console.error(err.message); // "Command failed with exit code 1"
-  console.error(err.code); // 1
+  if (err instanceof AuthError) {
+    console.error("Not paired - run: udb pair <target>");
+  } else if (err instanceof ConnectionError) {
+    console.error("Cannot reach device:", err.message);
+  } else if (err instanceof CommandError) {
+    console.error("Command failed with exit code:", err.code);
+  }
 }
 ```
 

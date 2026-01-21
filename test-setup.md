@@ -190,7 +190,68 @@ udb inventory --json
 
 ---
 
-## Step 10: Daemon Management
+## Step 10: Test Streaming Shell
+
+**NEW: Interactive Shell with PTY Support**
+
+```bash
+# Start shell on device
+udb shell
+```
+
+Or with explicit target:
+```bash
+udb shell 127.0.0.1:9910
+```
+
+**Expected behavior:**
+- Interactive shell prompt appears
+- Terminal is in raw mode (cursor control works)
+- Typing appears character-by-character in real-time
+- Arrow keys work for command history
+- Tab completion works
+- Ctrl+C stops running commands (doesn't exit shell)
+- Ctrl+D exits shell cleanly
+- Terminal resize events propagate correctly
+
+**Test checklist:**
+```bash
+# Type commands normally
+$ whoami
+root
+
+# Use arrow keys to navigate history
+$ <up arrow>  # Shows previous command
+
+# Use tab completion
+$ echo hel<tab>  # Completes "hello" or similar
+
+# Run background process and stop it
+$ sleep 100
+^C  # Ctrl+C stops sleep but keeps shell running
+
+# Resize terminal during execution
+$ yes  # Resize terminal window - should adapt
+
+# Exit cleanly
+$ exit
+# or Ctrl+D
+```
+
+**Multiple concurrent shells:**
+```bash
+# Terminal 1
+udb shell
+
+# Terminal 2 (while Terminal 1 is active)
+udb shell
+
+# Both shells should work independently with separate streams
+```
+
+---
+
+## Step 11: Daemon Management
 
 ```bash
 # Stop the daemon
@@ -227,6 +288,14 @@ udb daemon start
 - [ ] Contexts work with `udb context use`
 - [ ] Groups can be created with `udb group add`
 - [ ] Groups can execute with `udb group exec`
+- [ ] `udb shell` opens interactive shell
+- [ ] Shell typing works in real-time
+- [ ] Arrow keys navigate command history
+- [ ] Tab completion works
+- [ ] Ctrl+C stops commands (keeps shell running)
+- [ ] Ctrl+D exits cleanly
+- [ ] Terminal resize works during shell session
+- [ ] Multiple concurrent shells work independently
 - [ ] Example scripts run without errors
 - [ ] API works with programmatic test
 

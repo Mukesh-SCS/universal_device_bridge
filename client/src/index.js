@@ -229,7 +229,8 @@ async function tcpRequest(target, messages, options = {}) {
     onStream = null,
     keepOpen = false,
     preAuth = false,
-    timeoutMs = 10000
+    timeoutMs = 10000,
+    ignoreTerminalTypes = []  // Types to ignore as terminal (e.g., AUTH_REQUIRED during pairing)
   } = options;
 
   const { publicKeyPem } = loadOrCreateClientKeypair();
@@ -298,6 +299,11 @@ async function tcpRequest(target, messages, options = {}) {
         MSG.FILE_PULL_END,
         MSG.FILE_ERROR
       ];
+
+      // Skip ignored terminal types (they're informational, not final)
+      if (ignoreTerminalTypes.includes(m.type)) {
+        return;
+      }
 
       if (terminalTypes.includes(m.type)) {
         clearTimeout(timeout);
@@ -379,7 +385,8 @@ export async function pair(target) {
   const fp = fingerprintPublicKeyPem(publicKeyPem);
 
   const res = await tcpRequest(target, [{ type: MSG.PAIR_REQUEST }], {
-    preAuth: true
+    preAuth: true,
+    ignoreTerminalTypes: [MSG.AUTH_REQUIRED]  // Ignore AUTH_REQUIRED during pairing flow
   });
 
   if (res.msg?.type === MSG.PAIR_OK) {

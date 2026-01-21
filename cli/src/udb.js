@@ -357,6 +357,8 @@ async function execCmd() {
 }
 
 async function shellCmd() {
+  let restoreTerminal = false;
+  
   try {
     let targetArg;
 
@@ -380,50 +382,72 @@ async function shellCmd() {
       rows: process.stdout.rows || 24
     });
 
-    // Set up terminal
-    const origMode = process.stdin.isTTY ? process.stdin.isRawMode : null;
-    process.stdin.setRawMode(true);
+    // Set up terminal - only if TTY
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true);
+      restoreTerminal = true;
+    }
     process.stdin.resume();
     process.stdin.setEncoding("utf8");
 
     // Forward resize events
     const onResize = () => {
-      shellStream.resize(process.stdout.columns || 80, process.stdout.rows || 24);
+      if (process.stdout.isTTY) {
+        shellStream.resize(process.stdout.columns || 80, process.stdout.rows || 24);
+      }
     };
     process.stdout.on("resize", onResize);
 
     // Forward stdin to shell
-    process.stdin.on("data", (chunk) => {
-      shellStream.write(chunk);
-    });
+    const onStdin = (chunk) => {
+      try {
+        shellStream.write(chunk);
+      } catch (err) {
+        // Stream might be closed, just ignore
+      }
+    };
+    process.stdin.on("data", onStdin);
 
     // Forward shell output to stdout
-    shellStream.on("data", (chunk) => {
+    const onData = (chunk) => {
       process.stdout.write(chunk);
-    });
+    };
+    shellStream.on("data", onData);
 
     // Handle stream close
-    shellStream.on("close", () => {
-      process.stdin.setRawMode(false);
-      process.stdout.off("resize", onResize);
+    const onClose = () => {
+      cleanup();
       process.exit(0);
-    });
+    };
+    shellStream.on("close", onClose);
 
-    // Handle shell exit via error
-    shellStream.on("error", (err) => {
-      process.stdin.setRawMode(false);
-      process.stdout.off("resize", onResize);
-      if (err.message !== "stream_closed") {
-        die(err.message);
+    // Handle stream error
+    const onError = (err) => {
+      cleanup();
+      if (err.message && err.message !== "stream_closed") {
+        console.error(`Shell error: ${err.message}`);
       }
-      process.exit(0);
-    });
+      process.exit(1);
+    };
+    shellStream.on("error", onError);
+
+    // Cleanup function
+    const cleanup = () => {
+      shellStream.off("data", onData);
+      shellStream.off("close", onClose);
+      shellStream.off("error", onError);
+      process.stdin.off("data", onStdin);
+      process.stdout.off("resize", onResize);
+      if (restoreTerminal && process.stdin.isTTY) {
+        process.stdin.setRawMode(false);
+      }
+    };
 
   } catch (err) {
-    if (process.stdin.isTTY) {
+    if (restoreTerminal && process.stdin.isTTY) {
       process.stdin.setRawMode(false);
     }
-    die(formatError(err));
+    die(`Shell failed: ${formatError(err)}`);
   }
 }
 

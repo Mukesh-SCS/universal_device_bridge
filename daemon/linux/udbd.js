@@ -389,7 +389,7 @@ const server = net.createServer((socket) => {
                 encodeFrame({
                   type: MSG.STREAM_DATA,
                   streamId,
-                  data: data.toString("base64")
+                  b64: data.toString("base64")
                 })
               );
             });
@@ -405,13 +405,7 @@ const server = net.createServer((socket) => {
               );
             });
 
-            socket.write(
-              encodeFrame({
-                type: MSG.STREAM_DATA,
-                streamId,
-                data: Buffer.from(`connected to shell\n`, "utf8").toString("base64")
-              })
-            );
+            // Don't send initial message - let shell prompt appear naturally
 
             log(`SHELL service opened streamId=${streamId}`);
           } catch (err) {
@@ -456,7 +450,7 @@ const server = net.createServer((socket) => {
 
         if (stream.type === "shell") {
           try {
-            const data = Buffer.from(m.data || "", "base64");
+            const data = Buffer.from(m.b64 || "", "base64");
             stream.process.write(data);
           } catch (err) {
             socket.write(
