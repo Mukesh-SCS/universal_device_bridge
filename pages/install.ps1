@@ -40,7 +40,7 @@ param(
 )
 
 # Configuration
-$Repo = "tripa2020/universal_device_bridge"
+$Repo = "Mukesh-SCS/universal_device_bridge"
 $ErrorActionPreference = "Stop"
 
 function Write-Status {

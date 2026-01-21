@@ -51,7 +51,7 @@ import {
   execOnGroup,
   execByLabels,
   exportInventory
-} from "@udb/client/fleet";
+  } from "../../client/src/fleet.js";
 
 const [, , cmd, ...rest] = process.argv;
 const UDB_DIR = path.join(os.homedir(), ".udb");

@@ -17,7 +17,7 @@ set -euo pipefail
 VERSION="${UDB_VERSION:-latest}"
 INSTALL_DIR="${UDB_INSTALL_DIR:-/usr/local/bin}"
 VERIFY_CHECKSUM=true
-REPO="tripa2020/universal_device_bridge"
+REPO="Mukesh-SCS/universal_device_bridge"
 
 # Colors
 RED='\033[0;31m'
