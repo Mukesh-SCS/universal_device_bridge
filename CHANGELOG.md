@@ -5,6 +5,79 @@ All notable changes to UDB are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-01-21
+
+### Added
+
+#### Phase 8: Universal udb Experience
+
+- **udb-Compatible CLI Surface** (Phase 8A)
+  - `udb connect <target>` - connects and sets as default device
+  - `udb start-server` - alias for `daemon start`
+  - `udb kill-server` - alias for `daemon stop`
+  - udb developers can use UDB with zero friction
+
+- **Zero-Config Default Device** (Phase 8B)
+  - Auto-select single discovered device
+  - Interactive device selection when multiple found
+  - `udb shell` works immediately in common case
+
+- **Device Type Identity** (Phase 8C)
+  - Devices report type: `embedded-linux`, `mcu`, `simulator`, `unknown`
+  - `udb devices` shows tabular output with type column
+  - `udb info` displays device type
+
+- **First-Run Experience** (Phase 8D)
+  - `udb doctor --first-run` for guided setup
+  - Auto-generates keypair on first run
+  - Clearer error messages with actionable instructions
+
+- **udb-Style Examples** (Phase 8E)
+  - `examples/udb-style/` with three workflows
+  - Embedded Linux, MCU over Serial, CI Simulator
+  - Copy-paste runnable commands
+
+### Changed
+
+- Help text reorganized for udb-familiar UX
+- Device list output now tabular with TYPE column
+- Error messages more actionable ("Run: udb pair <target>")
+
+---
+
+## [0.6.0] - 2026-01-21
+
+### Added
+
+#### Phase 7: Distribution, Trust & Long-Term Guarantees
+
+- **Binary Distribution** (Phase 7A)
+  - Prebuilt binaries for Linux (x64, arm64), macOS (Intel, Apple Silicon), Windows (x64)
+  - One-command installer scripts (`scripts/install.sh`, `scripts/install.ps1`)
+  - GitHub Actions release workflow (`.github/workflows/release.yml`)
+  - SHA256 checksum generation and verification
+  - Build script (`scripts/build-binaries.js`) using `pkg`
+
+- **Compatibility & Upgrade Policy** (Phase 7B)
+  - Comprehensive compatibility matrix (`docs/COMPATIBILITY.md`)
+  - Platform support documentation
+  - API stability guarantees
+  - LTS policy framework
+
+- **Security Posture** (Phase 7C)
+  - Complete security documentation (`SECURITY.md`)
+  - Threat model with trust boundaries
+  - Key lifecycle management script (`scripts/keys.js`)
+  - Cryptographic algorithm documentation
+
+- **Governance** (Phase 7D)
+  - Contributing guidelines (`CONTRIBUTING.md`)
+  - Decision-making process
+  - RFC process for major changes
+  - Release process documentation
+
+---
+
 ## [0.5.0] - 2026-01-21
 
 ### Added
@@ -163,7 +236,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 #### Phase 1: Initial Release
 
-- Host-side CLI (adb-style client)
+- Host-side CLI (udb-style client)
 - Linux daemon
 - Simulator daemon
 - USB and TCP transport support

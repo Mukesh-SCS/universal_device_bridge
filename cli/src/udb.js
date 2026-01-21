@@ -10,6 +10,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import readline from "node:readline";
 import { spawn } from "node:child_process";
 
 import {
@@ -110,9 +111,73 @@ function isRunning(pid) {
   }
 }
 
+/**
+ * Prompt user to select a device interactively.
+ * @param {Array} devices - List of discovered devices
+ * @returns {Promise<object>} Selected device
+ */
+async function promptDeviceSelection(devices) {
+  console.log("\nMultiple devices found:");
+  devices.forEach((d, i) => {
+    const name = d.name || "unknown";
+    const target = `${d.host}:${d.port}`;
+    console.log(`  [${i + 1}] ${name.padEnd(20)} ${target}`);
+  });
+  console.log("");
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) => {
+    rl.question("Select device [1]: ", (answer) => {
+      rl.close();
+      const idx = answer.trim() === "" ? 0 : parseInt(answer, 10) - 1;
+      if (isNaN(idx) || idx < 0 || idx >= devices.length) {
+        resolve(devices[0]); // Default to first
+      } else {
+        resolve(devices[idx]);
+      }
+    });
+  });
+}
+
+/**
+ * Resolve target with interactive device selection for TTY.
+ * If multiple devices found and running in TTY mode (not --json), prompt user.
+ * @param {string|object} maybeTarget - Optional explicit target
+ * @returns {Promise<object>} Resolved target { host, port }
+ */
+async function resolveTargetInteractive(maybeTarget) {
+  try {
+    return await resolveTarget(maybeTarget);
+  } catch (err) {
+    // Handle multiple devices case interactively
+    if (err.code === "AMBIGUOUS_TARGET" && process.stdout.isTTY && !json) {
+      const devices = await discoverDevices();
+      const selected = await promptDeviceSelection(devices);
+      
+      // Save as current context for convenience
+      addContext("default", {
+        host: selected.host,
+        port: selected.port,
+        name: selected.name || ""
+      });
+      setCurrentContext("default");
+      
+      return selected;
+    }
+    throw err;
+  }
+}
+
 function formatError(err) {
   if (err instanceof AuthError) {
-    return { message: `Not authorized. Run: udb pair <ip>:<port>`, code: "AUTH_FAILED" };
+    return { 
+      message: `Device requires pairing.\nRun: udb pair <target>`, 
+      code: "AUTH_FAILED" 
+    };
   }
 
   if (err instanceof ConnectionError) {
@@ -269,6 +334,7 @@ async function infoCmd() {
       console.log(JSON.stringify(result, null, 2));
     } else {
       console.log(`Name: ${result.name}`);
+      console.log(`Type: ${result.deviceType || "unknown"}`);
       console.log(`Version: ${result.version}`);
       console.log(`Build: ${result.build}`);
       console.log(`Platform: ${result.platform}`);
@@ -278,9 +344,6 @@ async function infoCmd() {
       console.log(`Exec enabled: ${result.execEnabled}`);
       console.log(`TCP port: ${result.tcpPort}`);
       console.log(`UDP port: ${result.udpPort}`);
-      if (result.simulator) {
-        console.log(`Simulator: yes`);
-      }
     }
   } catch (err) {
     handleError(err);
@@ -332,7 +395,8 @@ async function devicesCmd() {
         name: d.name,
         context: ctx ? ctx[0] : null,
         online: true,
-        source: "udp"
+        source: "udp",
+        type: "unknown"
       });
     }
 
@@ -346,17 +410,28 @@ async function devicesCmd() {
           name: ctx.name || "",
           context: ctxName,
           online: false,
-          source: "context"
+          source: "context",
+          type: "unknown"
         });
       }
     }
 
-    // Probe online status for context-only devices
+    // Probe online status and fetch device type for online devices
     const deviceList = [...merged.values()];
     await Promise.all(
       deviceList.map(async (d) => {
         if (d.source === "context") {
           d.online = await probeTcp({ host: d.host, port: d.port });
+        }
+        // Try to get device info for online devices
+        if (d.online) {
+          try {
+            const info = await getInfo({ host: d.host, port: d.port });
+            d.type = info.deviceType || (info.simulator ? "simulator" : "unknown");
+            if (!d.name && info.name) d.name = info.name;
+          } catch {
+            // Info might require auth, just leave type as unknown
+          }
         }
       })
     );
@@ -368,6 +443,7 @@ async function devicesCmd() {
             host: d.host,
             port: d.port,
             name: d.name,
+            type: d.type,
             context: d.context,
             online: d.online,
             source: d.source
@@ -377,10 +453,15 @@ async function devicesCmd() {
         )
       );
     } else {
+      // Table-style output
+      console.log(`${"NAME".padEnd(16)} ${"TYPE".padEnd(16)} ${"TARGET".padEnd(24)} STATUS`);
+      console.log("─".repeat(70));
       for (const d of deviceList) {
-        const ctxInfo = d.context ? `  [context: ${d.context}]` : "";
-        const onlineStatus = d.online ? "  [online]" : "  [offline]";
-        console.log(`${d.host}:${d.port}  name=${d.name}${ctxInfo}${onlineStatus}`);
+        const name = (d.name || d.context || "-").substring(0, 15).padEnd(16);
+        const type = (d.type || "unknown").padEnd(16);
+        const target = `${d.host}:${d.port}`.padEnd(24);
+        const status = d.online ? "online" : "offline";
+        console.log(`${name} ${type} ${target} ${status}`);
       }
     }
   } catch (err) {
@@ -469,10 +550,10 @@ async function execCmd() {
     }
 
     if (!command) {
-      usageError('Usage: exec [ip:port] "<cmd>"');
+      usageError('Usage: udb exec [ip:port] "<cmd>"');
     }
 
-    const target = await resolveTarget(targetArg);
+    const target = await resolveTargetInteractive(targetArg);
     const result = await exec(target, command);
 
     if (result.stdout) process.stdout.write(result.stdout);
@@ -498,7 +579,7 @@ async function shellCmd() {
       targetArg = undefined;
     }
 
-    const target = await resolveTarget(targetArg);
+    const target = await resolveTargetInteractive(targetArg);
     
     // Import streaming client
     const { createStreamingSession } = await import("@udb/client");
@@ -584,7 +665,7 @@ async function shellCmd() {
 async function connectCmd() {
   try {
     if (!rest[0]) {
-      usageError("Usage: connect <ip:port | name>");
+      usageError("Usage: udb connect <ip:port | name>");
     }
 
     const arg = rest[0];
@@ -607,14 +688,37 @@ async function connectCmd() {
       target = matches[0];
     }
 
-    const result = await status(target);
+    // Verify device is reachable
+    const reachable = await probeTcp(target);
+    if (!reachable) {
+      die(`Cannot connect to ${target.host}:${target.port}`);
+    }
+
+    // Get device info
+    let deviceName = "";
+    try {
+      const info = await getInfo(target);
+      deviceName = info.name || "";
+    } catch {
+      // Info might require auth, continue anyway
+    }
+
+    // Save as default context (udb-style: connect sets current device)
+    addContext("default", {
+      host: target.host,
+      port: target.port,
+      name: deviceName
+    });
+    setCurrentContext("default");
 
     if (json) {
-      console.log(JSON.stringify({ target, result }, null, 2));
+      console.log(JSON.stringify({
+        success: true,
+        connected: `${target.host}:${target.port}`,
+        name: deviceName
+      }, null, 2));
     } else {
-      console.log(
-        `Connected to ${target.host}:${target.port}  name=${result.name}`
-      );
+      console.log(`connected to ${target.host}:${target.port}`);
     }
   } catch (err) {
     handleError(err);
@@ -909,7 +1013,7 @@ async function pushCmd() {
       localPath = rest[1];
       remotePath = rest[2];
     } else {
-      target = await resolveTarget();
+      target = await resolveTargetInteractive();
       localPath = rest[0];
       remotePath = rest[1];
     }
@@ -950,7 +1054,7 @@ async function pullCmd() {
       remotePath = rest[1];
       localPath = rest[2];
     } else {
-      target = await resolveTarget();
+      target = await resolveTargetInteractive();
       remotePath = rest[0];
       localPath = rest[1];
     }
@@ -973,9 +1077,15 @@ async function pullCmd() {
 
 async function doctorCmd() {
   const checks = [];
-  let targetArg = rest[0]?.includes(":") ? rest[0] : undefined;
+  const isFirstRun = hasFlag("--first-run");
+  let targetArg = rest.find(r => r.includes(":") && !r.startsWith("--"));
 
-  console.log("🔍 UDB Doctor - Diagnosing connectivity and configuration\n");
+  if (isFirstRun) {
+    console.log("🚀 UDB First-Run Setup\n");
+    console.log("Welcome to UDB! Let's make sure everything is ready.\n");
+  } else {
+    console.log("🔍 UDB Doctor - Diagnosing connectivity and configuration\n");
+  }
 
   // Check 1: Local config
   console.log("1. Checking local configuration...");
@@ -1002,7 +1112,15 @@ async function doctorCmd() {
 
     if (fs.existsSync(pubKeyPath) && fs.existsSync(privKeyPath)) {
       checks.push({ name: "Client keypair", status: "ok", detail: pubKeyPath });
-      console.log(`   ✓ Client keypair found: ${pubKeyPath}`);
+      console.log(`   ✓ Client keypair found`);
+    } else if (isFirstRun) {
+      // Auto-generate keys on first run
+      console.log(`   ⚠ No keypair found. Generating...`);
+      const { loadOrCreateClientKeypair, fingerprintPublicKeyPem } = await import("@udb/protocol/src/crypto.js");
+      const { publicKeyPem } = loadOrCreateClientKeypair();
+      const fp = fingerprintPublicKeyPem(publicKeyPem);
+      checks.push({ name: "Client keypair", status: "ok", detail: `Generated, fingerprint: ${fp}` });
+      console.log(`   ✓ Keypair generated! Fingerprint: ${fp}`);
     } else {
       checks.push({ name: "Client keypair", status: "warning", detail: "Not created yet" });
       console.log(`   ⚠ Client keypair not found (will be created on first operation)`);
@@ -1141,67 +1259,67 @@ async function main() {
   if (cmd === "group" && rest[0] === "exec") return groupExecCmd();
   if (cmd === "inventory") return inventoryCmd();
 
-  console.log(`Universal Device Bridge (UDB) CLI v0.4.0
+  // udb-compatible aliases
+  if (cmd === "start-server") return daemonStart();
+  if (cmd === "kill-server") return daemonStop();
+
+  console.log(`Universal Device Bridge (UDB) v0.7.0
+udb-style device access for embedded systems, MCUs, and simulators.
 
 Usage:
-  udb devices [--json]              Discover devices on the network
-  udb status [target] [--json]      Get device status (requires auth)
-  udb services [target] [--json]    List available services
-  udb info [target] [--json]        Get device info
-  udb ping [target] [--json]        Check device connectivity
-  udb doctor [target] [--json]      Diagnose connection issues
+  udb devices                       Discover devices on the network
+  udb connect <target>              Connect to device (sets as default)
+  udb shell                         Interactive shell
+  udb exec "<cmd>"                  Run command
+  udb push <src> <dst>              Push file to device
+  udb pull <src> <dst>              Pull file from device
+
+Device Management:
+  udb status [target]               Get device status
+  udb info [target]                 Get device info
+  udb ping [target]                 Check device connectivity
+  udb doctor [target]               Diagnose connection issues
   udb pair <target>                 Pair with a device
   udb unpair <target> [--all|--fp]  Unpair from a device
-  udb list-paired <target> [--json] List paired clients
-  udb shell [target]                Interactive shell
-  udb exec [target] "<cmd>"         Run command
-  udb push [target] <src> <dst>     Push file to device
-  udb pull [target] <src> <dst>     Pull file from device
-  udb connect <target>              Test connection to device
+  udb list-paired <target>          List paired clients
 
 Context Management:
-  udb context list [--json]         List saved contexts
+  udb context list                  List saved contexts
   udb context add <name> <target>   Save a named context
   udb context use <name>            Set current context
 
 Fleet Management:
-  udb group list [--json]           List device groups
+  udb group list                    List device groups
   udb group add <name> <targets...> Create a group
   udb group exec <name> "<cmd>"     Run command on group
-  udb inventory [--json]            Export fleet inventory
+  udb inventory                     Export fleet inventory
 
 Configuration:
-  udb config show [--json]          Show current config
+  udb config show                   Show current config
   udb daemon start|stop|status      Manage local daemon
+  udb start-server                  Alias for 'daemon start'
+  udb kill-server                   Alias for 'daemon stop'
 
 Target Formats:
   ip:port                           TCP connection (192.168.1.100:9910)
-  tcp://ip:port                     Explicit TCP
-  serial://path?baud=115200         Serial connection
+  tcp://ip:port                     Explicit TCP URL
+  serial://path?baud=115200         Serial connection (MCU)
   device-name                       Discover by name
 
-Global Flags:
+Flags:
   --json, -j                        Output in JSON format
 
 Exit Codes:
   0 = success, 1 = error, 2 = usage error
 
-Examples:
-  udb devices                                  # Discover devices
-  udb pair 192.168.1.100:9910                  # Pair with device
-  udb exec "whoami"                            # Run command
-  udb exec 192.168.1.100:9910 "ls /tmp"        # Run on specific device
-  udb context add lab 192.168.1.100:9910       # Save as 'lab'
-  udb context use lab                          # Use 'lab' context
-  udb group add cluster 10.0.0.1:9910 10.0.0.2:9910
-  udb group exec cluster "systemctl restart app"
+Quick Start:
+  udb connect 192.168.1.100:9910    # Connect to device
+  udb shell                          # Open shell
+  udb exec "ls /tmp"                 # Run command
+  udb push ./app /opt/app            # Deploy file
 
-For programmatic use:
-  import { exec, status, pair, getServices, getInfo, ping } from "@udb/client";
-  import { createGroup, execOnGroup } from "@udb/client/fleet";
-
-Documentation:
-  https://github.com/your-org/universal-device-bridge
+For more information, visit:
+Documentation: https://github.com/your-org/universal-device-bridge
 `);
 }
 

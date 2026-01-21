@@ -1,5 +1,6 @@
 {
   "name": "udb-root",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -14,10 +15,32 @@
     "test:client": "node --test client/test/*.test.js",
     "test:cli": "node --test cli/test/*.test.js",
     "test:all": "node --test protocol/test/*.test.js client/test/*.test.js cli/test/*.test.js",
-    "test:coverage": "node --test --experimental-test-coverage"
+    "test:coverage": "node --test --experimental-test-coverage",
+    "build": "node scripts/build-binaries.js",
+    "build:all": "node scripts/build-binaries.js --all"
+  },
+  "pkg": {
+    "scripts": [
+      "cli/src/**/*.js",
+      "client/src/**/*.js",
+      "protocol/src/**/*.js"
+    ],
+    "assets": [
+      "client/src/**/*",
+      "protocol/src/**/*"
+    ],
+    "targets": [
+      "node20-linux-x64",
+      "node20-linux-arm64",
+      "node20-macos-x64",
+      "node20-macos-arm64",
+      "node20-win-x64"
+    ],
+    "outputPath": "dist"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@yao-pkg/pkg": "^5.11.0",
     "typescript": "^5.9.3"
   }
 }

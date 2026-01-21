@@ -391,10 +391,11 @@ const server = net.createServer((socket) => {
           const infoPayload = {
             type: "info",
             name: DEVICE_NAME,
-            version: "0.4.0",
+            version: "0.7.0",
             build: "simulator",
             platform: "linux",
             arch: "x86_64",
+            deviceType: "simulator",
             pairingMode: PAIRING,
             execEnabled: true,
             root: "/",

@@ -314,10 +314,11 @@ const server = net.createServer((socket) => {
           const infoPayload = {
             type: "info",
             name: DEVICE_NAME,
-            version: "0.4.0",
+            version: "0.7.0",
             build: process.env.UDB_BUILD || "unknown",
             platform: os.platform(),
             arch: os.arch(),
+            deviceType: "embedded-linux",
             pairingMode: PAIRING,
             execEnabled: !NO_EXEC,
             root: FILES_ROOT,

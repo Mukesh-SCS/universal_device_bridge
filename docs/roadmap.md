@@ -7,7 +7,7 @@ Evolution of Universal Device Bridge from local-first tool to scriptable platfor
 ## v1: Initial Release (Phase 1)
 ✅ **COMPLETE**
 
-- Host-side CLI (adb-style client)
+- Host-side CLI (udb-style client)
 - Linux daemon
 - Simulator daemon
 - USB and TCP transport support

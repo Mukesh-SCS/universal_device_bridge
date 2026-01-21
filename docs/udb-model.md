@@ -4,7 +4,7 @@
 
 This document defines the **core mental model of Universal Device Bridge (UDB)**. It exists to lock architectural decisions and prevent feature drift. Everything in UDB — protocol, daemon, CLI, and client APIs — must conform to this model.
 
-UDB is intentionally designed to feel and behave like **ADB**, but generalized for *any device*.
+UDB is intentionally designed to feel and behave like **udb**, but generalized for *any device*.
 
 If a feature does not fit this model, it does not belong in UDB core.
 
@@ -220,7 +220,7 @@ Breaking these rules requires a major version bump.
 
 ## Why This Model Exists
 
-ADB succeeded because:
+udb succeeded because:
 
 * It was boring
 * It was strict
