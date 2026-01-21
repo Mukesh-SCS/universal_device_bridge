@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>UDB – Universal Device Bridge</title>
+    <meta name="description" content="ADB-style device access for embedded systems, MCUs, and simulators." />
+    <style>
+      :root {
+        --bg: #0d1117;
+        --fg: #c9d1d9;
+        --accent: #58a6ff;
+        --code-bg: #161b22;
+        --border: #30363d;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 600px;
+        text-align: center;
+      }
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        color: #fff;
+      }
+      .tagline {
+        color: #8b949e;
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+      }
+      .install-box {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      .install-box h2 {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #8b949e;
+        margin-bottom: 1rem;
+      }
+      pre {
+        background: var(--bg);
+        border-radius: 6px;
+        padding: 1rem;
+        overflow-x: auto;
+        text-align: left;
+        font-size: 0.95rem;
+      }
+      code {
+        font-family: "SF Mono", "Fira Code", Consolas, monospace;
+        color: var(--accent);
+      }
+      .links {
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .features {
+        margin-top: 2rem;
+        text-align: left;
+        display: grid;
+        gap: 0.5rem;
+      }
+      .feature {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .check {
+        color: #3fb950;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>UDB</h1>
+      <p class="tagline">Universal Device Bridge — ADB for any device</p>
+      
+      <div class="install-box">
+        <h2>Install (Linux / macOS)</h2>
+        <pre><code>curl -fsSL https://udb.pages.dev/install.sh | sh</code></pre>
+      </div>
+
+      <div class="install-box">
+        <h2>Quick Start</h2>
+        <pre><code>udb devices                    # Discover devices
+udb connect 192.168.1.100:9910 # Connect
+udb shell                      # Interactive shell
+udb push ./app /opt/app        # Deploy file</code></pre>
+      </div>
+
+      <div class="features">
+        <div class="feature"><span class="check">✓</span> Embedded Linux (Raspberry Pi, BeagleBone)</div>
+        <div class="feature"><span class="check">✓</span> MCU over serial (ESP32, Arduino)</div>
+        <div class="feature"><span class="check">✓</span> Simulators for CI/CD</div>
+        <div class="feature"><span class="check">✓</span> ADB-compatible commands</div>
+        <div class="feature"><span class="check">✓</span> Zero config when possible</div>
+      </div>
+
+      <div class="links" style="margin-top: 2rem;">
+        <a href="https://github.com/tripa2020/universal_device_bridge">GitHub</a>
+        <a href="https://github.com/tripa2020/universal_device_bridge#readme">Documentation</a>
+        <a href="https://github.com/tripa2020/universal_device_bridge/releases">Releases</a>
+      </div>
+    </div>
+  </body>
+</html>
