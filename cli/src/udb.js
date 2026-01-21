@@ -1319,7 +1319,7 @@ Quick Start:
   udb push ./app /opt/app            # Deploy file
 
 For more information, visit:
-Documentation: https://github.com/your-org/universal-device-bridge
+Documentation: https://github.com/Mukesh-SCS/universal_device_bridge
 `);
 }
 

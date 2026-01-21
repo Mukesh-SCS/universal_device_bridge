@@ -1,253 +1,253 @@
-#UDBDocumentation
+# UDB Documentation
 
-CompletedocumentationforUniversalDeviceBridge.
-
----
-
-##TableofContents
-
--[Overview](#overview)
--[Architecture](#architecture)
--[Installation](#installation)
--[PlatformSupport](#platform-support)
--[Security](#security)
--[ExitCodes](#exit-codes)
--[ReportingIssues](#reporting-issues)
+Complete documentation for Universal Device Bridge.
 
 ---
 
-##Overview
+## Table of Contents
 
-UniversalDeviceBridge(UDB)isa**local-first,offline-capable**deviceaccesssysteminspiredbyAndroidDebugBridge(ADB),buttargetingnon-AndroiddeviceslikeembeddedLinux,MCUs,simulators,andautomotiveECUs.
-
-###KeyFeatures
-
--**Devicediscovery**-Finddevicesonyournetwork
--**Securepairing**-Ed25519keypair-basedauthentication
--**Commandexecution**-Runcommandsremotely
--**Filetransfer**-Push/pullfilesto/fromdevices
--**Interactiveshell**-FullPTY-basedshellsessions
--**Fleetmanagement**-Managemultipledeviceswithgroupsandlabels
--**CI-ready**-ScriptableCLIwithJSONoutput
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [Platform Support](#platform-support)
+- [Security](#security)
+- [Exit Codes](#exit-codes)
+- [Reporting Issues](#reporting-issues)
 
 ---
 
-##Architecture
+## Overview
+
+Universal Device Bridge (UDB) is a **local-first, offline-capable** device access system inspired by Android Debug Bridge (ADB), but targeting non-Android devices like embedded Linux, MCUs, simulators, and automotive ECUs.
+
+### Key Features
+
+- **Device discovery** - Find devices on your network
+- **Secure pairing** - Ed25519 keypair-based authentication
+- **Command execution** - Run commands remotely
+- **File transfer** - Push/pull files to/from devices
+- **Interactive shell** - Full PTY-based shell sessions
+- **Fleet management** - Manage multiple devices with groups and labels
+- **CI-ready** - Scriptable CLI with JSON output
+
+---
+
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│CLIENTSIDE│
+│                         CLIENT SIDE                             │
 ├─────────────────────────────────────────────────────────────────┤
-│┌───────────┐┌─────────────┐┌─────────────────────┐│
-││udbCLI│───▶│@udb/client│───▶│@udb/protocol││
-│└───────────┘└─────────────┘└─────────────────────┘│
-│││
+│  ┌───────────┐    ┌─────────────┐    ┌─────────────────────┐   │
+│  │  udb CLI  │───▶│ @udb/client │───▶│   @udb/protocol     │   │
+│  └───────────┘    └─────────────┘    └─────────────────────┘   │
+│                                              │                  │
 └──────────────────────────────────────────────│──────────────────┘
-│
-┌──────────┴──────────┐
-│TCP/Serial/USB│
-└──────────┬──────────┘
-│
+                                               │
+                                    ┌──────────┴──────────┐
+                                    │  TCP / Serial / USB │
+                                    └──────────┬──────────┘
+                                               │
 ┌──────────────────────────────────────────────│──────────────────┐
-│DEVICESIDE││
+│                         DEVICE SIDE          │                  │
 ├──────────────────────────────────────────────│──────────────────┤
-│▼│
-│┌─────────────────────────────────────────────────────────┐│
-││udbd(Daemon)││
-││┌─────────┐┌─────────┐┌─────────┐┌────────────┐││
-│││Auth││Exec││Push/││Discovery│││
-│││Pairing││Handler││Pull││(UDP)│││
-││└─────────┘└─────────┘└─────────┘└────────────┘││
-│└─────────────────────────────────────────────────────────┘│
-││
-│Targets:Linux/Embedded/MCU/Simulator/ECU│
+│                                              ▼                  │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                      udbd (Daemon)                       │   │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌────────────┐  │   │
+│  │  │  Auth   │  │  Exec   │  │  Push/  │  │  Discovery │  │   │
+│  │  │ Pairing │  │ Handler │  │  Pull   │  │   (UDP)    │  │   │
+│  │  └─────────┘  └─────────┘  └─────────┘  └────────────┘  │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  Targets: Linux / Embedded / MCU / Simulator / ECU             │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-###CoreComponents
+### Core Components
 
-|Component|Description|
+| Component | Description |
 |-----------|-------------|
-|**CLI(`udb`)**|Command-lineinterfaceforalloperations|
-|**ClientLibrary**|Node.jsAPI(`@udb/client`)forprogrammaticuse|
-|**Daemon(`udbd`)**|Runsontargetdevicestohandlerequests|
-|**Protocol**|Wireprotocolforclient-daemoncommunication|
+| **CLI (`udb`)** | Command-line interface for all operations |
+| **Client Library** | Node.js API (`@udb/client`) for programmatic use |
+| **Daemon (`udbd`)** | Runs on target devices to handle requests |
+| **Protocol** | Wire protocol for client-daemon communication |
 
-###DesignPrinciples
+### Design Principles
 
--**Local-first**-Workswithoutinternet
--**Offline-capable**-Noclouddependencies
--**Secure**-Cryptographicauthenticationbydefault
--**Scriptable**-CLI+programmaticAPI
--**Simple**-Nocomplexorchestration
+- **Local-first** - Works without internet
+- **Offline-capable** - No cloud dependencies
+- **Secure** - Cryptographic authentication by default
+- **Scriptable** - CLI + programmatic API
+- **Simple** - No complex orchestration
 
 ---
 
-##Installation
+## Installation
 
-###One-LineInstall
+### One-Line Install
 
-**Linux/macOS:**
+**Linux / macOS:**
 ```bash
-curl-fsSLhttps://udb.dev/install.sh|sh
+curl -fsSL https://udb.dev/install.sh | sh
 ```
 
-**Windows(PowerShell):**
+**Windows (PowerShell):**
 ```powershell
-irmhttps://udb.dev/install.ps1|iex
+irm https://udb.dev/install.ps1 | iex
 ```
 
-###ManualDownload
-
-Downloadprebuiltbinariesfrom[GitHubReleases](https://github.com/user/udb/releases).
-
-###npmInstall
+### npm Install
 
 ```bash
-npminstall-g@udb/cli
+npm install -g @udb/cli
 ```
 
+### Manual Download
+
+Download prebuilt binaries from [GitHub Releases](https://github.com/Mukesh-SCS/universal_device_bridge/releases).
+
 ---
 
-##PlatformSupport
+## Platform Support
 
-###PrebuiltBinaries
+### Prebuilt Binaries
 
-|Platform|Architecture|
+| Platform | Architecture |
 |----------|-------------|
-|Linux|x86_64|
-|Linux|ARM64|
-|macOS|Intel|
-|macOS|AppleSilicon|
-|Windows|x86_64|
+| Linux | x86_64 |
+| Linux | ARM64 |
+| macOS | Intel |
+| macOS | Apple Silicon |
+| Windows | x86_64 |
 
-###Node.jsRuntime(npmusage)
+### Node.js Runtime (npm usage)
 
-|Node.jsVersion|Notes|
+| Node.js Version | Notes |
 |----------------|-------|
-|22.x|Recommended|
-|20.xLTS|Supported|
-|18.xLTS|Minimum|
+| 22.x | Recommended |
+| 20.x LTS | Supported |
+| 18.x LTS | Minimum |
 
-###TargetDeviceSupport
+### Target Device Support
 
-|Platform|
+| Platform |
 |----------|
-|Linuxx86/x64|
-|LinuxARM|
-|Simulator|
-|Serialdevices|
+| Linux x86/x64 |
+| Linux ARM |
+| Simulator |
+| Serial devices |
 
 ---
 
-##Security
+## Security
 
-###SecurityModel
+### Security Model
 
-UDBusesEd25519keypair-basedauthentication:
+UDB uses Ed25519 keypair-based authentication:
 
-1.**KeypairIdentity**-Eachclienthasauniquekeypair
-2.**Challenge-Response**-Devicesverifyclientsviasignednonces
-3.**Fingerprint**-Publickeyfingerprintsforverification
-4.**NoCentralAuthority**-Alltrustisdevice-local
-5.**Revocable**-Devicescanunpairclientsatanytime
+1. **Keypair Identity** - Each client has a unique keypair
+2. **Challenge-Response** - Devices verify clients via signed nonces
+3. **Fingerprint** - Public key fingerprints for verification
+4. **No Central Authority** - All trust is device-local
+5. **Revocable** - Devices can unpair clients at any time
 
-###KeyStorage
+### Key Storage
 
 ```
 ~/.udb/
-├──keys/
-│├──client.key#Privatekey(0600)
-│├──client.pub#Publickey
-│└──known_devices/#Paireddevicekeys
-└──config.json
+├── keys/
+│   ├── client.key        # Private key (0600)
+│   ├── client.pub        # Public key
+│   └── known_devices/    # Paired device keys
+└── config.json
 ```
 
-###SecureDefaults
+### Secure Defaults
 
-|Setting|Default|
+| Setting | Default |
 |---------|---------|
-|AuthRequired|Yes|
-|PairingRequired|Yes|
-|KeyPermissions|0600|
-|ConnectionTimeout|30s|
+| Auth Required | Yes |
+| Pairing Required | Yes |
+| Key Permissions | 0600 |
+| Connection Timeout | 30s |
 
-###SecurityChecklist
+### Security Checklist
 
--[]KeepUDBupdated
--[]Protect`~/.udb/keys/`directory
--[]Reviewpaireddevicesregularly(`udbdevices`)
--[]Useontrustednetworksonly
+- [ ] Keep UDB updated
+- [ ] Protect `~/.udb/keys/` directory
+- [ ] Review paired devices regularly (`udb devices`)
+- [ ] Use on trusted networks only
 
 ---
 
-##ExitCodes
+## Exit Codes
 
-###StandardCodes
+### Standard Codes
 
-|Code|Meaning|
+| Code | Meaning |
 |------|---------|
-|`0`|Success|
-|`1`|Generalerror(connection,auth,runtime)|
-|`2`|Usageerror(invalidarguments)|
+| `0` | Success |
+| `1` | General error (connection, auth, runtime) |
+| `2` | Usage error (invalid arguments) |
 
-###`udbexec`ExitCodes
+### `udb exec` Exit Codes
 
-The`exec`commandreturnstheremotecommand'sexitcode:
+The `exec` command returns the remote command's exit code:
 
-|Code|Description|
+| Code | Description |
 |------|-------------|
-|`0`|Remotecommandsucceeded|
-|`1-125`|Remotecommand'sexitcode|
-|`126`|Commandnotexecutable|
-|`127`|Commandnotfound|
+| `0` | Remote command succeeded |
+| `1-125` | Remote command's exit code |
+| `126` | Command not executable |
+| `127` | Command not found |
 
-###ScriptingExample
+### Scripting Example
 
 ```bash
-#Checkdevicereachability
-ifudbping10.0.0.1:9910;then
-echo"Deviceonline"
+# Check device reachability
+if udb ping 10.0.0.1:9910; then
+  echo "Device online"
 else
-echo"Deviceoffline"
+  echo "Device offline"
 fi
 
-#Capturecommandoutput
-result=$(udbexec10.0.0.1:9910"whoami")
-echo"User:$result"
+# Capture command output
+result=$(udb exec 10.0.0.1:9910 "whoami")
+echo "User: $result"
 ```
 
 ---
 
-##ReportingIssues
+## Reporting Issues
 
-###BugReports
+### Bug Reports
 
-Reportbugsat:https://github.com/user/udb/issues
+Report bugs at: https://github.com/Mukesh-SCS/universal_device_bridge/issues
 
-###SecurityVulnerabilities
+### Security Vulnerabilities
 
-**DonotreportsecurityvulnerabilitiesthroughpublicGitHubissues.**
+**Do not report security vulnerabilities through public GitHub issues.**
 
-Email:tripathimukeshmani@outlook.com
+Email: tripathimukeshmani@outlook.com
 
 Include:
--Descriptionofthevulnerability
--Stepstoreproduce
--Affectedversions
--Potentialimpact
+- Description of the vulnerability
+- Steps to reproduce
+- Affected versions
+- Potential impact
 
-###ResponseTimeline
+### Response Timeline
 
-|Phase|Timeline|
+| Phase | Timeline |
 |-------|----------|
-|InitialResponse|24-48hours|
-|Triage|1week|
-|Fix(critical)|2weeks|
-|Fix(high)|4weeks|
+| Initial Response | 24-48 hours |
+| Triage | 1 week |
+| Fix (critical) | 2 weeks |
+| Fix (high) | 4 weeks |
 
 ---
 
-##License
+## License
 
-MITLicense-see[LICENSE](../LICENSE)fordetails.
+MIT License - see [LICENSE](../LICENSE) for details.

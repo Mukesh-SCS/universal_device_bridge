@@ -70,7 +70,7 @@ npm install -g @udb/cli
 
 ### Manual Download
 
-Download prebuilt binaries from [GitHub Releases](https://github.com/user/udb/releases).
+Download prebuilt binaries from [GitHub Releases](https://github.com/Mukesh-SCS/universal_device_bridge/releases).
 
 ---
 

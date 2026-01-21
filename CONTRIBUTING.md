@@ -62,7 +62,7 @@ Violationsshouldbereportedtothemaintainers.
 
 ```bash
 #Clonetherepository
-gitclonehttps://github.com/yourorg/udb.git
+git clone https://github.com/Mukesh-SCS/universal_device_bridge.git
 cdudb
 
 #Installrootdependencies
