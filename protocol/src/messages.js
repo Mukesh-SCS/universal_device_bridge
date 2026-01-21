@@ -1,3 +1,12 @@
+/**
+ * UDB Protocol Version
+ * 
+ * Version history:
+ * - 1: Initial protocol (Phase 1-3)
+ * - Future versions will be documented here
+ */
+export const PROTOCOL_VERSION = 1;
+
 export const MSG = {
   HELLO: "hello",
   HELLO_OK: "hello_ok",
@@ -42,6 +51,6 @@ export const MSG = {
   SERVICE_ERROR: "service_error"
 };
 
-export function hello({ clientName, pubKey }) {
-  return { type: MSG.HELLO, clientName, pubKey };
+export function hello({ clientName, pubKey, protocol = PROTOCOL_VERSION }) {
+  return { type: MSG.HELLO, clientName, pubKey, protocol };
 }

@@ -289,6 +289,21 @@ const server = net.createServer((socket) => {
         clientName = m.clientName ?? "unknown";
         clientPubKey = m.pubKey;
 
+        // Protocol version negotiation (Phase 4)
+        const clientProtocol = m.protocol ?? 1;
+        const SUPPORTED_PROTOCOL = 1;
+        
+        if (clientProtocol > SUPPORTED_PROTOCOL) {
+          socket.write(encodeFrame({ 
+            type: MSG.ERROR, 
+            error: "unsupported_protocol", 
+            supported: [SUPPORTED_PROTOCOL], 
+            got: clientProtocol 
+          }));
+          socket.end();
+          return;
+        }
+
         if (!clientPubKey) {
           socket.write(encodeFrame({ type: MSG.ERROR, error: "missing_pubkey" }));
           socket.end();

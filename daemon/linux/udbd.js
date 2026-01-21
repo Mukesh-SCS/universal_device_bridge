@@ -174,6 +174,21 @@ const server = net.createServer((socket) => {
         clientName = m.clientName ?? "unknown";
         clientPubKey = m.pubKey;
 
+        // Protocol version negotiation (Phase 4)
+        const clientProtocol = m.protocol ?? 1; // Default to 1 for backward compat
+        const SUPPORTED_PROTOCOL = 1;
+        
+        if (clientProtocol > SUPPORTED_PROTOCOL) {
+          socket.write(encodeFrame({ 
+            type: MSG.ERROR, 
+            error: "unsupported_protocol", 
+            supported: [SUPPORTED_PROTOCOL], 
+            got: clientProtocol 
+          }));
+          socket.end();
+          return;
+        }
+
         if (!clientPubKey) {
           socket.write(encodeFrame({ type: MSG.ERROR, error: "missing_pubkey" }));
           socket.end();
@@ -253,6 +268,179 @@ const server = net.createServer((socket) => {
 
         socket.write(encodeFrame({ type: MSG.PAIR_OK, deviceName: DEVICE_NAME }));
         return;
+      }
+
+      // Pre-auth services: services and info (allowed without authentication)
+      if (m.type === MSG.OPEN_SERVICE) {
+        const serviceName = String(m.service ?? "").trim();
+        const streamId = m.streamId || generateStreamId();
+
+        // "services" service - returns capabilities (pre-auth allowed)
+        if (serviceName === "services") {
+          const servicesPayload = {
+            type: "services",
+            services: {
+              shell: { pty: true, resize: true },
+              exec: { oneShot: true, enabled: !NO_EXEC },
+              fs: { push: true, pull: true },
+              logs: { follow: true },
+              status: { requestResponse: true },
+              pairing: { mode: PAIRING },
+              services: { preAuth: true },
+              info: { preAuth: true },
+              ping: { preAuth: true },
+              shutdown: { requiresAuth: true, enabled: true },
+              restart: { requiresAuth: true, enabled: true }
+            }
+          };
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_DATA,
+            streamId,
+            b64: Buffer.from(JSON.stringify(servicesPayload)).toString("base64")
+          }));
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_CLOSE,
+            streamId
+          }));
+
+          log(`SERVICES query answered`);
+          return;
+        }
+
+        // "info" service - returns daemon metadata (pre-auth allowed)
+        if (serviceName === "info") {
+          const infoPayload = {
+            type: "info",
+            name: DEVICE_NAME,
+            version: "0.4.0",
+            build: process.env.UDB_BUILD || "unknown",
+            platform: os.platform(),
+            arch: os.arch(),
+            pairingMode: PAIRING,
+            execEnabled: !NO_EXEC,
+            root: FILES_ROOT,
+            tcpPort: TCP_PORT,
+            udpPort: UDP_PORT,
+            protocol: 1
+          };
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_DATA,
+            streamId,
+            b64: Buffer.from(JSON.stringify(infoPayload)).toString("base64")
+          }));
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_CLOSE,
+            streamId
+          }));
+
+          log(`INFO query answered`);
+          return;
+        }
+
+        // "ping" service - cheap health check (pre-auth allowed)
+        if (serviceName === "ping") {
+          const pingPayload = {
+            type: "pong",
+            time: Date.now(),
+            name: DEVICE_NAME,
+            uptime: process.uptime()
+          };
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_DATA,
+            streamId,
+            b64: Buffer.from(JSON.stringify(pingPayload)).toString("base64")
+          }));
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_CLOSE,
+            streamId
+          }));
+
+          log(`PING answered`);
+          return;
+        }
+
+        // "shutdown" service - requires auth
+        if (serviceName === "shutdown") {
+          if (!authed) {
+            socket.write(encodeFrame({
+              type: MSG.SERVICE_ERROR,
+              streamId,
+              error: "auth_required"
+            }));
+            return;
+          }
+
+          const shutdownPayload = {
+            type: "shutdown",
+            message: "Daemon shutting down",
+            time: Date.now()
+          };
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_DATA,
+            streamId,
+            b64: Buffer.from(JSON.stringify(shutdownPayload)).toString("base64")
+          }));
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_CLOSE,
+            streamId
+          }));
+
+          log(`SHUTDOWN requested by ${clientName}`);
+          
+          // Schedule shutdown after sending response
+          setTimeout(() => {
+            log("Daemon shutting down...");
+            process.exit(0);
+          }, 100);
+          return;
+        }
+
+        // "restart" service - requires auth
+        if (serviceName === "restart") {
+          if (!authed) {
+            socket.write(encodeFrame({
+              type: MSG.SERVICE_ERROR,
+              streamId,
+              error: "auth_required"
+            }));
+            return;
+          }
+
+          // On Linux, we exit with code 42 - systemd or wrapper script can restart us
+          const restartPayload = {
+            type: "restart",
+            message: "Daemon restarting (exit code 42)",
+            time: Date.now()
+          };
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_DATA,
+            streamId,
+            b64: Buffer.from(JSON.stringify(restartPayload)).toString("base64")
+          }));
+
+          socket.write(encodeFrame({
+            type: MSG.STREAM_CLOSE,
+            streamId
+          }));
+
+          log(`RESTART requested by ${clientName}`);
+          
+          // Exit with code 42 to signal restart
+          setTimeout(() => {
+            log("Daemon restarting (exit 42)...");
+            process.exit(42);
+          }, 100);
+          return;
+        }
       }
 
       if (!authed) {
