@@ -58,10 +58,10 @@ Parse a target string into `{ host, port }` format.
 ```javascript
 import { parseTarget } from "@udb/client";
 
-const t1 = parseTarget("192.168.1.100:9910");
+const t1 = parseTarget("10.0.0.1:9910");
 // { host: "192.168.1.100", port: 9910 }
 
-const t2 = parseTarget("tcp://192.168.1.100:9910");
+const t2 = parseTarget("tcp://10.0.0.1:9910");
 // { host: "192.168.1.100", port: 9910 }
 ```
 
@@ -82,7 +82,7 @@ Resolve a target from explicit argument, current context, last target, or discov
 import { resolveTarget } from "@udb/client";
 
 // Explicit target
-const t1 = await resolveTarget("192.168.1.100:9910");
+const t1 = await resolveTarget("10.0.0.1:9910");
 
 // From current context (no args)
 const t2 = await resolveTarget();
@@ -136,7 +136,7 @@ Get device status.
 ```javascript
 import { status } from "@udb/client";
 
-const info = await status("192.168.1.100:9910");
+const info = await status("10.0.0.1:9910");
 // {
 //   name: "device-name",
 //   pairingMode: "auto",
@@ -161,7 +161,7 @@ Pair with a device (authorize this client).
 ```javascript
 import { pair } from "@udb/client";
 
-const result = await pair("192.168.1.100:9910");
+const result = await pair("10.0.0.1:9910");
 // { fingerprint: "abc123...", paired: true }
 ```
 
@@ -182,12 +182,12 @@ Unpair from a device.
 import { unpair } from "@udb/client";
 
 // Unpair specific client
-const r1 = await unpair("192.168.1.100:9910", {
+const r1 = await unpair("10.0.0.1:9910", {
   fingerprint: "abc123..."
 });
 
 // Unpair all clients
-const r2 = await unpair("192.168.1.100:9910", { all: true });
+const r2 = await unpair("10.0.0.1:9910", { all: true });
 // { scope: "all", removed: 5, fingerprint: undefined }
 ```
 
@@ -210,7 +210,7 @@ List all paired clients on a device.
 ```javascript
 import { listPaired } from "@udb/client";
 
-const clients = await listPaired("192.168.1.100:9910");
+const clients = await listPaired("10.0.0.1:9910");
 // [
 //   { fp: "abc123...", name: "cli-host", addedAt: "2026-01-07T..." },
 //   { fp: "def456...", name: "script-runner", addedAt: "2026-01-07T..." }
@@ -233,7 +233,7 @@ Execute a command on a device.
 ```javascript
 import { exec } from "@udb/client";
 
-const result = await exec("192.168.1.100:9910", "whoami");
+const result = await exec("10.0.0.1:9910", "whoami");
 // { stdout: "user\n", stderr: "", exitCode: 0 }
 ```
 
@@ -361,7 +361,7 @@ Create a persistent session for multiple operations.
 ```javascript
 import { createSession } from "@udb/client";
 
-const session = await createSession("192.168.1.100:9910");
+const session = await createSession("10.0.0.1:9910");
 
 try {
   const info = await session.status();
@@ -452,9 +452,9 @@ Execute the same command on multiple devices.
 import { execBatch } from "@udb/client";
 
 const targets = [
-  "192.168.1.100:9910",
-  "192.168.1.101:9910",
-  "192.168.1.102:9910"
+  "10.0.0.1:9910",
+  "10.0.0.2:9910",
+  "10.0.0.3:9910"
 ];
 
 const results = await execBatch(targets, "uname -a", { parallel: true });

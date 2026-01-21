@@ -1301,7 +1301,7 @@ Configuration:
   udb kill-server                   Alias for 'daemon stop'
 
 Target Formats:
-  ip:port                           TCP connection (192.168.1.100:9910)
+  ip:port                           TCP connection (10.0.0.1:9910)
   tcp://ip:port                     Explicit TCP URL
   serial://path?baud=115200         Serial connection (MCU)
   device-name                       Discover by name
@@ -1313,7 +1313,7 @@ Exit Codes:
   0 = success, 1 = error, 2 = usage error
 
 Quick Start:
-  udb connect 192.168.1.100:9910    # Connect to device
+  udb connect 10.0.0.1:9910    # Connect to device
   udb shell                          # Open shell
   udb exec "ls /tmp"                 # Run command
   udb push ./app /opt/app            # Deploy file

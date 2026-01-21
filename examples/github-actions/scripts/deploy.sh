@@ -6,7 +6,7 @@
 #   ./deploy.sh <target> <app-binary>
 #
 # Example:
-#   ./deploy.sh 192.168.1.100:9910 ./build/myapp.bin
+#   ./deploy.sh 10.0.0.1:9910 ./build/myapp.bin
 
 set -e
 

@@ -13,7 +13,7 @@
  * 
  * Usage:
  *   node scripts/multi_stream.js [target]
- *   node scripts/multi_stream.js 192.168.1.100:9910
+ *   node scripts/multi_stream.js 10.0.0.1:9910
  */
 
 import { 

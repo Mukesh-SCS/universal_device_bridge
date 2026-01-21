@@ -5,103 +5,177 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>UDB – Universal Device Bridge</title>
     <meta name="description" content="ADB-style device access for embedded systems, MCUs, and simulators." />
+
     <style>
       :root {
         --bg: #0d1117;
         --fg: #c9d1d9;
+        --muted: #8b949e;
         --accent: #58a6ff;
-        --code-bg: #161b22;
+        --accent-strong: #1f6feb;
+        --card: #161b22;
         --border: #30363d;
+        --success: #3fb950;
       }
-      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
         background: var(--bg);
         color: var(--fg);
         min-height: 100vh;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
         padding: 2rem;
         line-height: 1.6;
       }
+
       .container {
-        max-width: 600px;
+        max-width: 720px;
+        width: 100%;
         text-align: center;
       }
+
       h1 {
-        font-size: 2.5rem;
-        margin-bottom: 0.5rem;
+        font-size: 3rem;
         color: #fff;
+        margin-bottom: 0.25rem;
       }
+
       .tagline {
-        color: #8b949e;
-        margin-bottom: 2rem;
-        font-size: 1.1rem;
+        color: var(--muted);
+        font-size: 1.2rem;
+        margin-bottom: 2.5rem;
       }
-      .install-box {
-        background: var(--code-bg);
+
+      .card {
+        background: var(--card);
         border: 1px solid var(--border);
-        border-radius: 8px;
+        border-radius: 10px;
         padding: 1.5rem;
-        margin-bottom: 2rem;
+        margin-bottom: 1.75rem;
+        text-align: left;
       }
-      .install-box h2 {
+
+      .card h2 {
         font-size: 0.9rem;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: #8b949e;
+        letter-spacing: 0.08em;
+        color: var(--muted);
         margin-bottom: 1rem;
       }
+
       pre {
         background: var(--bg);
-        border-radius: 6px;
+        border-radius: 8px;
         padding: 1rem;
         overflow-x: auto;
-        text-align: left;
         font-size: 0.95rem;
       }
+
       code {
         font-family: "SF Mono", "Fira Code", Consolas, monospace;
         color: var(--accent);
       }
-      .links {
-        display: flex;
-        gap: 1.5rem;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-      a {
-        color: var(--accent);
-        text-decoration: none;
-      }
-      a:hover {
-        text-decoration: underline;
-      }
-      .features {
-        margin-top: 2rem;
-        text-align: left;
+
+      .buttons {
         display: grid;
-        gap: 0.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
       }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.9rem 1.2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        color: #fff;
+        background: var(--accent-strong);
+        border: 1px solid var(--border);
+        transition: transform 0.05s ease, background 0.15s ease;
+      }
+
+      .btn.secondary {
+        background: transparent;
+        color: var(--accent);
+      }
+
+      .btn:hover {
+        background: var(--accent);
+        transform: translateY(-1px);
+      }
+
+      .features {
+        display: grid;
+        gap: 0.6rem;
+        margin-top: 1.5rem;
+      }
+
       .feature {
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        font-size: 0.95rem;
       }
+
       .check {
-        color: #3fb950;
+        color: var(--success);
+        font-weight: bold;
+      }
+
+      .footer {
+        margin-top: 2rem;
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        font-size: 0.95rem;
+      }
+
+      .footer a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .footer a:hover {
+        text-decoration: underline;
       }
     </style>
   </head>
+
   <body>
     <div class="container">
       <h1>UDB</h1>
-      <p class="tagline">Universal Device Bridge — ADB for any device</p>
-      
-      <div class="install-box">
+      <p class="tagline">
+        Universal Device Bridge — ADB-style access for any device
+      </p>
+
+      <!-- Install -->
+      <div class="card">
         <h2>Install</h2>
+
+        <div class="buttons">
+          <a class="btn" href="https://udb.pages.dev/install.sh">
+            Install for Linux
+          </a>
+          <a class="btn" href="https://udb.pages.dev/install.sh">
+            Install for macOS
+          </a>
+          <a class="btn" href="https://udb.pages.dev/install.ps1">
+            Install for Windows
+          </a>
+        </div>
+
         <pre><code># Linux / macOS
 curl -fsSL https://udb.pages.dev/install.sh | sh
 
@@ -109,26 +183,29 @@ curl -fsSL https://udb.pages.dev/install.sh | sh
 irm https://udb.pages.dev/install.ps1 | iex</code></pre>
       </div>
 
-      <div class="install-box">
+      <!-- Quick start -->
+      <div class="card">
         <h2>Quick Start</h2>
         <pre><code>udb devices                    # Discover devices
-udb connect 192.168.1.100:9910 # Connect
+udb connect 10.0.0.1:9910 # Connect
 udb shell                      # Interactive shell
 udb push ./app /opt/app        # Deploy file</code></pre>
       </div>
 
+      <!-- Features -->
       <div class="features">
         <div class="feature"><span class="check">✓</span> Embedded Linux (Raspberry Pi, BeagleBone)</div>
         <div class="feature"><span class="check">✓</span> MCU over serial (ESP32, Arduino)</div>
         <div class="feature"><span class="check">✓</span> Simulators for CI/CD</div>
         <div class="feature"><span class="check">✓</span> ADB-compatible commands</div>
-        <div class="feature"><span class="check">✓</span> Zero config when possible</div>
+        <div class="feature"><span class="check">✓</span> Zero-config when possible</div>
       </div>
 
-      <div class="links" style="margin-top: 2rem;">
-        <a href="https://github.com/tripa2020/universal_device_bridge">GitHub</a>
-        <a href="https://github.com/tripa2020/universal_device_bridge#readme">Documentation</a>
-        <a href="https://github.com/tripa2020/universal_device_bridge/releases">Releases</a>
+      <!-- Links -->
+      <div class="footer">
+        <a href="https://github.com/Mukesh-SCS/universal_device_bridge">GitHub</a>
+        <a href="https://github.com/Mukesh-SCS/universal_device_bridge#readme">Documentation</a>
+        <a href="https://github.com/Mukesh-SCS/universal_device_bridge/releases">Releases</a>
       </div>
     </div>
   </body>

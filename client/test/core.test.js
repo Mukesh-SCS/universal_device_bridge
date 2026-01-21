@@ -28,7 +28,7 @@ import {
 
 describe("parseTarget", () => {
   it("should parse ip:port format", () => {
-    const target = parseTarget("192.168.1.100:9910");
+    const target = parseTarget("10.0.0.1:9910");
     
     assert.strictEqual(target.host, "192.168.1.100");
     assert.strictEqual(target.port, 9910);

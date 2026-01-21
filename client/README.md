@@ -18,11 +18,11 @@ const devices = await discoverDevices();
 console.log(devices); // [{ host: "192.168.1.100", port: 9910, name: "device1" }]
 
 // Execute a command (one-shot, auto-connects)
-const result = await exec("192.168.1.100:9910", "whoami");
+const result = await exec("10.0.0.1:9910", "whoami");
 console.log(result.stdout); // "user\n"
 
 // Or use a session for multiple operations
-const session = await createSession("192.168.1.100:9910");
+const session = await createSession("10.0.0.1:9910");
 const r1 = await session.exec("hostname");
 const r2 = await session.exec("uptime");
 await session.close();
@@ -102,7 +102,7 @@ All API functions throw descriptive errors:
 import { exec, AuthError, ConnectionError, CommandError } from "@udb/client";
 
 try {
-  await exec("192.168.1.100:9910", "false");
+  await exec("10.0.0.1:9910", "false");
 } catch (err) {
   if (err instanceof AuthError) {
     console.error("Not paired - run: udb pair <target>");

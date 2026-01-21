@@ -35,7 +35,7 @@ udb exec "journalctl -f -u myapp"
 ```
 $ udb devices
 NAME             TYPE              TARGET                   STATUS
-pi-lab           embedded-linux    192.168.1.100:9910      online
+pi-lab           embedded-linux    10.0.0.1:9910      online
 
 $ udb shell
 pi-lab:~$ 

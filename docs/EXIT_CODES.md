@@ -69,7 +69,7 @@ These errors result in exit code 2:
 ### Checking for Success
 
 ```bash
-udb ping 192.168.1.100:9910
+udb ping 10.0.0.1:9910
 if [ $? -eq 0 ]; then
   echo "Device is online"
 fi
@@ -78,7 +78,7 @@ fi
 ### Distinguishing Error Types
 
 ```bash
-udb exec 192.168.1.100:9910 "my-command"
+udb exec 10.0.0.1:9910 "my-command"
 code=$?
 
 case $code in
@@ -92,7 +92,7 @@ esac
 ### JSON Error Handling
 
 ```bash
-result=$(udb info 192.168.1.100:9910 --json 2>&1)
+result=$(udb info 10.0.0.1:9910 --json 2>&1)
 if echo "$result" | jq -e '.success == false' > /dev/null 2>&1; then
   error_code=$(echo "$result" | jq -r '.error.code')
   error_msg=$(echo "$result" | jq -r '.error.message')

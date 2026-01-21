@@ -13,7 +13,7 @@ async function main() {
 
   if (args.length === 0) {
     console.log(`Usage: ${process.argv[1]} <target>`);
-    console.log(`\nExample: ${process.argv[1]} 192.168.1.100:9910`);
+    console.log(`\nExample: ${process.argv[1]} 10.0.0.1:9910`);
     process.exit(1);
   }
 

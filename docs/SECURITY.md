@@ -6,8 +6,7 @@
 
 Instead, please report them via:
 
-1. **Email**: security@yourorg.com (replace with actual email)
-2. **GitHub Security Advisories**: https://github.com/yourorg/udb/security/advisories/new
+1. **Email**: tripathimukeshmani@outlook.com
 
 ### What to Include
 
@@ -278,6 +277,4 @@ UDB is designed to support compliance with common security frameworks:
 
 ## Contact
 
-- **Security Issues**: security@yourorg.com
-- **General Questions**: https://github.com/yourorg/udb/discussions
-- **Bug Reports**: https://github.com/yourorg/udb/issues
+- **Bug Reports**: https://github.com/mukesh-scs/udb/issues

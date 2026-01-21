@@ -43,13 +43,13 @@ import { UdbError, AuthError, CommandError } from "@udb/client";
 
 ### Execute a Command
 ```javascript
-const result = await exec("192.168.1.100:9910", "whoami");
+const result = await exec("10.0.0.1:9910", "whoami");
 console.log(result.stdout); // "user\n"
 ```
 
 ### Get Device Status
 ```javascript
-const info = await status("192.168.1.100:9910");
+const info = await status("10.0.0.1:9910");
 console.log(info.name); // "device-name"
 ```
 
@@ -61,7 +61,7 @@ devices.forEach(d => console.log(d.name));
 
 ### Create a Session (Multiple Commands)
 ```javascript
-const session = await createSession("192.168.1.100:9910");
+const session = await createSession("10.0.0.1:9910");
 await session.exec("cd /tmp");
 await session.exec("ls");
 await session.close();
@@ -78,7 +78,7 @@ results.forEach(r => {
 
 ### Pair with Device
 ```javascript
-const result = await pair("192.168.1.100:9910");
+const result = await pair("10.0.0.1:9910");
 console.log(result.fingerprint); // "abc123..."
 ```
 
@@ -178,8 +178,8 @@ All functions accept targets in multiple formats:
 
 ```javascript
 // String format
-await exec("192.168.1.100:9910", "whoami");
-await exec("tcp://192.168.1.100:9910", "whoami");
+await exec("10.0.0.1:9910", "whoami");
+await exec("tcp://10.0.0.1:9910", "whoami");
 
 // Object format
 await exec({ host: "192.168.1.100", port: 9910 }, "whoami");
@@ -262,8 +262,8 @@ const t = await resolveTarget();
 // Use t many times
 
 // Avoid - Typing target repeatedly
-await exec("192.168.1.100:9910", "cmd1");
-await exec("192.168.1.100:9910", "cmd2");
+await exec("10.0.0.1:9910", "cmd1");
+await exec("10.0.0.1:9910", "cmd2");
 ```
 
 ---
@@ -368,7 +368,7 @@ const online = await probeTcp({ host: "192.168.1.100", port: 9910 });
 ### Parse Target Strings
 ```javascript
 import { parseTarget } from "@udb/client";
-const t1 = parseTarget("192.168.1.100:9910");
+const t1 = parseTarget("10.0.0.1:9910");
 const t2 = parseTarget("tcp://example.com:9910");
 ```
 

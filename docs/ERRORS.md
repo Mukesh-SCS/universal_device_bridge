@@ -58,10 +58,10 @@ class AuthError extends UdbError {
 import { status, AuthError } from "@udb/client";
 
 try {
-  await status("192.168.1.100:9910");
+  await status("10.0.0.1:9910");
 } catch (err) {
   if (err instanceof AuthError) {
-    console.log("Not paired - run: udb pair 192.168.1.100:9910");
+    console.log("Not paired - run: udb pair 10.0.0.1:9910");
   }
 }
 ```
@@ -95,7 +95,7 @@ class ConnectionError extends UdbError {
 import { status, ConnectionError } from "@udb/client";
 
 try {
-  await status("192.168.1.100:9910");
+  await status("10.0.0.1:9910");
 } catch (err) {
   if (err instanceof ConnectionError) {
     console.log(`Cannot reach device: ${err.message}`);
@@ -127,7 +127,7 @@ class CommandError extends UdbError {
 import { exec, CommandError } from "@udb/client";
 
 try {
-  await exec("192.168.1.100:9910", "false"); // Always exits 1
+  await exec("10.0.0.1:9910", "false"); // Always exits 1
 } catch (err) {
   if (err instanceof CommandError) {
     console.log(`Command exited with code ${err.code}`);

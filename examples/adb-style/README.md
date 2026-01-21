@@ -12,7 +12,7 @@ curl -fsSL https://get.udb.dev | sh
 udb devices
 
 # Connect and use
-udb connect 192.168.1.100:9910
+udb connect 10.0.0.1:9910
 udb shell
 ```
 

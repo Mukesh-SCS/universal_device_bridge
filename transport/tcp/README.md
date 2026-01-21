@@ -18,8 +18,8 @@ TCP transport implementation for UDB.
 TCP transport is used automatically when connecting to devices via IP address:
 
 ```bash
-udb pair 192.168.1.100:9910
-udb exec 192.168.1.100:9910 "whoami"
+udb pair 10.0.0.1:9910
+udb exec 10.0.0.1:9910 "whoami"
 ```
 
 ## Implementation

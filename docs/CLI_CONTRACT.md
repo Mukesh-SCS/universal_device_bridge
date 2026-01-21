@@ -95,8 +95,8 @@ All commands accept targets in these formats:
 
 | Format | Example | Notes |
 |--------|---------|-------|
-| `ip:port` | `192.168.1.100:9910` | TCP connection |
-| `tcp://ip:port` | `tcp://192.168.1.100:9910` | Explicit TCP |
+| `ip:port` | `10.0.0.1:9910` | TCP connection |
+| `tcp://ip:port` | `tcp://10.0.0.1:9910` | Explicit TCP |
 | `serial://path` | `serial:///dev/ttyUSB0?baud=115200` | Serial connection |
 | `name` | `lab-device` | Resolve via discovery |
 
@@ -228,7 +228,7 @@ Manage local daemon (for testing/development).
 ### Check if device is reachable
 
 ```bash
-if udb ping 192.168.1.100:9910 --json | jq -e '.success' > /dev/null; then
+if udb ping 10.0.0.1:9910 --json | jq -e '.success' > /dev/null; then
   echo "Device is online"
 fi
 ```
@@ -236,7 +236,7 @@ fi
 ### Run command and check exit code
 
 ```bash
-udb exec 192.168.1.100:9910 "test -f /etc/config.txt"
+udb exec 10.0.0.1:9910 "test -f /etc/config.txt"
 if [ $? -eq 0 ]; then
   echo "Config file exists"
 fi
@@ -245,7 +245,7 @@ fi
 ### Get device info as JSON
 
 ```bash
-udb info 192.168.1.100:9910 --json | jq '.name, .version'
+udb info 10.0.0.1:9910 --json | jq '.name, .version'
 ```
 
 ### Fleet command with error handling

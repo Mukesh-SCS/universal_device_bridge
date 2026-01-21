@@ -67,7 +67,7 @@ udb devices --json
 ### 3. Pair and execute
 
 ```bash
-udb pair 192.168.1.100:9910
+udb pair 10.0.0.1:9910
 udb exec "whoami"
 ```
 
@@ -107,7 +107,7 @@ udb list-paired <ip:port> [--json]
 
 ```bash
 # Save a device as a context
-udb context add lab 192.168.1.100:9910
+udb context add lab 10.0.0.1:9910
 
 # Select active context
 udb context use lab
@@ -123,7 +123,7 @@ udb exec "whoami"
 
 ```bash
 # Create a device group
-udb group add lab 192.168.1.100:9910 192.168.1.101:9910
+udb group add lab 10.0.0.1:9910 10.0.0.2:9910
 
 # Execute on entire group
 udb group exec lab "uname -a"
@@ -160,15 +160,15 @@ import { exec, status, pair, discoverDevices } from "@udb/client";
 const devices = await discoverDevices();
 
 // Execute command
-const result = await exec("192.168.1.100:9910", "whoami");
+const result = await exec("10.0.0.1:9910", "whoami");
 console.log(result.stdout); // "user\n"
 
 // Get device status
-const info = await status("192.168.1.100:9910");
+const info = await status("10.0.0.1:9910");
 console.log(info.name); // "device-name"
 
 // Pair with device
-const pair_result = await pair("192.168.1.100:9910");
+const pair_result = await pair("10.0.0.1:9910");
 console.log(pair_result.fingerprint);
 ```
 
@@ -176,7 +176,7 @@ console.log(pair_result.fingerprint);
 
 **Persistent Sessions:**
 ```javascript
-const session = await createSession("192.168.1.100:9910");
+const session = await createSession("10.0.0.1:9910");
 await session.exec("cmd1");
 await session.exec("cmd2");
 await session.close();
@@ -261,14 +261,14 @@ Contexts are stored in `~/.udb/config.json` and work offline.
 ### Example 1: Basic execution
 
 ```bash
-udb pair 192.168.1.100:9910
+udb pair 10.0.0.1:9910
 udb exec "uptime"
 ```
 
 ### Example 2: Using contexts
 
 ```bash
-udb context add lab 192.168.1.100:9910
+udb context add lab 10.0.0.1:9910
 udb context use lab
 udb exec "df -h"
 udb status --json
@@ -277,7 +277,7 @@ udb status --json
 ### Example 3: Fleet operation
 
 ```bash
-udb group add lab 192.168.1.100:9910 192.168.1.101:9910 192.168.1.102:9910
+udb group add lab 10.0.0.1:9910 10.0.0.2:9910 10.0.0.3:9910
 udb group exec lab "systemctl status nginx"
 udb inventory --json > fleet.json
 ```
@@ -288,9 +288,9 @@ udb inventory --json > fleet.json
 // See scripts/ folder for full examples
 node scripts/devices.js
 node scripts/exec.js
-node scripts/context.js 192.168.1.100:9910
+node scripts/context.js 10.0.0.1:9910
 node scripts/pair.js
-node scripts/group.js 192.168.1.100:9910
+node scripts/group.js 10.0.0.1:9910
 ```
 
 ---
