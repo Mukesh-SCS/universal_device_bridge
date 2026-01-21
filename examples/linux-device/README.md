@@ -1,39 +1,39 @@
-# Linux Device Examples
+#LinuxDeviceExamples
 
-This directory contains examples for deploying UDB daemon on Linux devices.
+ThisdirectorycontainsexamplesfordeployingUDBdaemononLinuxdevices.
 
-## Quick Start
+##QuickStart
 
 ```bash
-# Start daemon on target Linux device
-node daemon/linux/udbd.js --pairing auto
+#StartdaemonontargetLinuxdevice
+nodedaemon/linux/udbd.js--pairingauto
 
-# From client, discover and connect
-udb devices
-udb pair <ip>:9910
-udb exec "uname -a"
+#Fromclient,discoverandconnect
+udbdevices
+udbpair<ip>:9910
+udbexec"uname-a"
 ```
 
-## Target Platforms
+##TargetPlatforms
 
-- **x86/x64 servers** - Standard Linux servers
-- **ARM devices** - Raspberry Pi, BeagleBone, etc.
-- **Embedded Linux** - OpenWrt, Yocto-based systems
-- **Cloud VMs** - AWS, GCP, Azure instances
+-**x86/x64servers**-StandardLinuxservers
+-**ARMdevices**-RaspberryPi,BeagleBone,etc.
+-**EmbeddedLinux**-OpenWrt,Yocto-basedsystems
+-**CloudVMs**-AWS,GCP,Azureinstances
 
-## Deployment Options
+##DeploymentOptions
 
-### Systemd Service
+###SystemdService
 
 ```ini
-# /etc/systemd/system/udbd.service
+#/etc/systemd/system/udbd.service
 [Unit]
-Description=Universal Device Bridge Daemon
+Description=UniversalDeviceBridgeDaemon
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/node /opt/udb/daemon/linux/udbd.js --pairing auto
+ExecStart=/usr/bin/node/opt/udb/daemon/linux/udbd.js--pairingauto
 Restart=always
 User=root
 
@@ -41,19 +41,19 @@ User=root
 WantedBy=multi-user.target
 ```
 
-### Docker
+###Docker
 
 ```dockerfile
-FROM node:20-slim
-COPY daemon/linux /app
-WORKDIR /app
-EXPOSE 9909/udp 9910/tcp
-CMD ["node", "udbd.js", "--pairing", "auto"]
+FROMnode:20-slim
+COPYdaemon/linux/app
+WORKDIR/app
+EXPOSE9909/udp9910/tcp
+CMD["node","udbd.js","--pairing","auto"]
 ```
 
-## Security Considerations
+##SecurityConsiderations
 
-- Use `--pairing prompt` for manual approval in production
-- Run with minimal privileges where possible
-- Use `--root` to restrict file transfer paths
-- Consider firewall rules for ports 9909/9910
+-Use`--pairingprompt`formanualapprovalinproduction
+-Runwithminimalprivilegeswherepossible
+-Use`--root`torestrictfiletransferpaths
+-Considerfirewallrulesforports9909/9910

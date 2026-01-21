@@ -98,7 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Exit code documentation (`docs/EXIT_CODES.md`)
 
 - **SDK Stabilization** (Phase 6C)
-  - API stability markers (✅ Stable, 🔶 Beta, ⚠️ Internal)
+  - API stability markers (Stable, Beta, Internal)
   - Comprehensive TypeScript types (`types.d.ts`)
   - Error taxonomy documentation (`docs/ERRORS.md`)
   - No `any` types in public APIs

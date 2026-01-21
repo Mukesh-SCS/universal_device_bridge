@@ -1,41 +1,37 @@
-# MCU Device Examples
+#MCUDeviceExamples
 
-This directory will contain examples for running UDB daemon on microcontrollers.
+ExamplesforrunningUDBdaemononmicrocontrollers.
 
-## Planned Targets
+##TargetPlatforms
 
-- **ESP32** - WiFi-enabled MCU
-- **STM32** - ARM Cortex-M series
-- **Arduino** - For compatible boards
-- **RP2040** - Raspberry Pi Pico
+-**ESP32**-WiFi-enabledMCU
+-**STM32**-ARMCortex-Mseries
+-**Arduino**-Forcompatibleboards
+-**RP2040**-RaspberryPiPico
 
-## Status
+##Architecture
 
-🔲 **Planned** - MCU daemon implementation is on the roadmap.
-
-## Architecture
-
-MCU daemons will be lightweight implementations of the UDB protocol:
+MCUdaemonswillbelightweightimplementationsoftheUDBprotocol:
 
 ```
 ┌─────────────────────────────────────┐
-│          MCU (e.g., ESP32)          │
+│MCU(e.g.,ESP32)│
 ├─────────────────────────────────────┤
-│  ┌──────────────────────────────┐   │
-│  │      udbd-mcu (C/C++)        │   │
-│  │  ┌────────┐  ┌────────────┐  │   │
-│  │  │ WiFi / │  │  Protocol  │  │   │
-│  │  │ Serial │  │  Handler   │  │   │
-│  │  └────────┘  └────────────┘  │   │
-│  └──────────────────────────────┘   │
+│┌──────────────────────────────┐│
+││udbd-mcu(C/C++)││
+││┌────────┐┌────────────┐││
+│││WiFi/││Protocol│││
+│││Serial││Handler│││
+││└────────┘└────────────┘││
+│└──────────────────────────────┘│
 └─────────────────────────────────────┘
 ```
 
-## Contributing
+##Contributing
 
-If you're interested in MCU support, contributions are welcome. Key considerations:
+Ifyou'reinterestedinMCUsupport,contributionsarewelcome.Keyconsiderations:
 
-- Minimal memory footprint
-- No dynamic allocation where possible
-- Support for both WiFi TCP and Serial transports
-- Subset of protocol (exec, status, push/pull)
+-Minimalmemoryfootprint
+-Nodynamicallocationwherepossible
+-SupportforbothWiFiTCPandSerialtransports
+-Subsetofprotocol(exec,status,push/pull)

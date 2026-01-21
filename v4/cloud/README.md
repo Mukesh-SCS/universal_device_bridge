@@ -1,117 +1,110 @@
-# UDB Cloud Services (Optional)
+#UDBCloudServices(Optional)
 
-Optional cloud services that enhance UDB without compromising its local-first nature.
+OptionalcloudservicesthatenhanceUDBwithoutcompromisingitslocal-firstnature.
 
-## Core Principle
+##CorePrinciple
 
-> **All cloud features are strictly opt-in. UDB works 100% offline by default.**
+>**Allcloudfeaturesarestrictlyopt-in.UDBworks100%offlinebydefault.**
 
-## Available Services
+##AvailableServices
 
-### 1. Discovery Relay
+###1.DiscoveryRelay
 
-Helps devices find each other across different networks:
+Helpsdevicesfindeachotheracrossdifferentnetworks:
 
 ```
-┌─────────────────┐         ┌─────────────────┐
-│   Client        │         │   Device        │
-│   (Office)      │         │   (Factory)     │
-└────────┬────────┘         └────────┬────────┘
-         │                           │
-         │    ┌─────────────────┐    │
-         └───▶│  Discovery      │◀───┘
-              │  Relay          │
-              └─────────────────┘
+┌─────────────────┐┌─────────────────┐
+│Client││Device│
+│(Office)││(Factory)│
+└────────┬────────┘└────────┬────────┘
+││
+│┌─────────────────┐│
+└───▶│Discovery│◀───┘
+│Relay│
+└─────────────────┘
 ```
 
-**How it works:**
-- Devices register their presence with relay
-- Clients query relay to find devices
-- All actual communication is still direct P2P
-- Relay never sees command data
+**Howitworks:**
+-Devicesregistertheirpresencewithrelay
+-Clientsqueryrelaytofinddevices
+-AllactualcommunicationisstilldirectP2P
+-Relayneverseescommanddata
 
-### 2. Fleet Registry
+###2.FleetRegistry
 
-Optional centralized storage for fleet metadata:
+Optionalcentralizedstorageforfleetmetadata:
 
-- Device names and labels
-- Group definitions
-- Historical status snapshots
-- Audit logs (who did what when)
+-Devicenamesandlabels
+-Groupdefinitions
+-Historicalstatussnapshots
+-Auditlogs(whodidwhatwhen)
 
-**NOT stored:**
-- Authentication keys (always local)
-- Command output (always direct)
-- File contents (always direct)
+**NOTstored:**
+-Authenticationkeys(alwayslocal)
+-Commandoutput(alwaysdirect)
+-Filecontents(alwaysdirect)
 
-### 3. Status Dashboard
+###3.StatusDashboard
 
-Web-based dashboard for fleet visibility:
+Web-baseddashboardforfleetvisibility:
 
-- Device online/offline status
-- Recent command history
-- Fleet health overview
-- Alerts and notifications
+-Deviceonline/offlinestatus
+-Recentcommandhistory
+-Fleethealthoverview
+-Alertsandnotifications
 
-## Architecture
+##Architecture
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│                        CLOUD LAYER (Optional)                   │
+│CLOUDLAYER(Optional)│
 ├────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │  Discovery   │  │    Fleet     │  │      Dashboard       │  │
-│  │   Relay      │  │   Registry   │  │        API           │  │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+│┌──────────────┐┌──────────────┐┌──────────────────────┐│
+││Discovery││Fleet││Dashboard││
+││Relay││Registry││API││
+│└──────────────┘└──────────────┘└──────────────────────┘│
 └────────────────────────────────────────────────────────────────┘
-                              │
-                              │ HTTPS (metadata only)
-                              │
+│
+│HTTPS(metadataonly)
+│
 ┌────────────────────────────────────────────────────────────────┐
-│                         LOCAL LAYER                             │
+│LOCALLAYER│
 ├────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐                    ┌──────────────────────┐  │
-│  │  udb CLI     │◀──── TCP/UDP ────▶│       udbd           │  │
-│  │  @udb/client │   (direct, local) │     (device)         │  │
-│  └──────────────┘                    └──────────────────────┘  │
+│┌──────────────┐┌──────────────────────┐│
+││udbCLI│◀────TCP/UDP────▶│udbd││
+││@udb/client│(direct,local)│(device)││
+│└──────────────┘└──────────────────────┘│
 └────────────────────────────────────────────────────────────────┘
 ```
 
-## Configuration
+##Configuration
 
 ```bash
-# Enable cloud relay (opt-in)
-udb config set cloud.enabled true
-udb config set cloud.relay https://relay.udb.example.com
+#Enablecloudrelay(opt-in)
+udbconfigsetcloud.enabledtrue
+udbconfigsetcloud.relayhttps://relay.udb.example.com
 
-# Disable cloud (default)
-udb config set cloud.enabled false
+#Disablecloud(default)
+udbconfigsetcloud.enabledfalse
 ```
 
-## Self-Hosting
+##Self-Hosting
 
-All cloud services can be self-hosted:
+Allcloudservicescanbeself-hosted:
 
 ```bash
-# Run your own relay
-docker run -p 8080:8080 udb/relay
+#Runyourownrelay
+dockerrun-p8080:8080udb/relay
 
-# Point UDB to your relay
-udb config set cloud.relay http://localhost:8080
+#PointUDBtoyourrelay
+udbconfigsetcloud.relayhttp://localhost:8080
 ```
 
-## Privacy
+##Privacy
 
-- No telemetry collected
-- No usage data sent
-- All cloud features can be disabled
-- Self-hosting fully supported
-- Data never leaves your network without explicit opt-in
+-Notelemetrycollected
+-Nousagedatasent
+-Allcloudfeaturescanbedisabled
+-Self-hostingfullysupported
+-Dataneverleavesyournetworkwithoutexplicitopt-in
 
-## Status
-
-| Service | Status | Self-Host |
-|---------|--------|-----------|
-| Discovery Relay | 🔲 Planned | ✅ Yes |
-| Fleet Registry | 🔲 Planned | ✅ Yes |
-| Dashboard | 🔲 Planned | ✅ Yes |

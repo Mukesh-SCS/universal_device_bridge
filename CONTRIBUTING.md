@@ -1,422 +1,422 @@
-# Contributing to UDB
+#ContributingtoUDB
 
-Thank you for your interest in contributing to UDB! This document provides guidelines and information for contributors.
+ThankyouforyourinterestincontributingtoUDB!Thisdocumentprovidesguidelinesandinformationforcontributors.
 
-## Table of Contents
+##TableofContents
 
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Setup](#development-setup)
-- [How to Contribute](#how-to-contribute)
-- [Pull Request Process](#pull-request-process)
-- [Coding Standards](#coding-standards)
-- [Testing](#testing)
-- [Documentation](#documentation)
-- [Release Process](#release-process)
-- [Governance](#governance)
-
----
-
-## Code of Conduct
-
-This project follows a simple code of conduct:
-
-1. **Be respectful** - Treat everyone with respect and professionalism
-2. **Be constructive** - Provide helpful feedback, not criticism
-3. **Be patient** - Maintainers are often volunteers with limited time
-4. **Be inclusive** - Welcome newcomers and help them contribute
-
-Violations should be reported to the maintainers.
+-[CodeofConduct](#code-of-conduct)
+-[GettingStarted](#getting-started)
+-[DevelopmentSetup](#development-setup)
+-[HowtoContribute](#how-to-contribute)
+-[PullRequestProcess](#pull-request-process)
+-[CodingStandards](#coding-standards)
+-[Testing](#testing)
+-[Documentation](#documentation)
+-[ReleaseProcess](#release-process)
+-[Governance](#governance)
 
 ---
 
-## Getting Started
+##CodeofConduct
 
-### What Can I Contribute?
+Thisprojectfollowsasimplecodeofconduct:
 
-| Type | Examples | Process |
+1.**Berespectful**-Treateveryonewithrespectandprofessionalism
+2.**Beconstructive**-Providehelpfulfeedback,notcriticism
+3.**Bepatient**-Maintainersareoftenvolunteerswithlimitedtime
+4.**Beinclusive**-Welcomenewcomersandhelpthemcontribute
+
+Violationsshouldbereportedtothemaintainers.
+
+---
+
+##GettingStarted
+
+###WhatCanIContribute?
+
+|Type|Examples|Process|
 |------|----------|---------|
-| **Bug Fixes** | Fix crashes, incorrect behavior | Open PR directly |
-| **Documentation** | Fix typos, clarify explanations | Open PR directly |
-| **Tests** | Add missing tests, improve coverage | Open PR directly |
-| **Small Features** | Minor enhancements, CLI flags | Open issue first |
-| **Large Features** | New commands, protocol changes | RFC required |
+|**BugFixes**|Fixcrashes,incorrectbehavior|OpenPRdirectly|
+|**Documentation**|Fixtypos,clarifyexplanations|OpenPRdirectly|
+|**Tests**|Addmissingtests,improvecoverage|OpenPRdirectly|
+|**SmallFeatures**|Minorenhancements,CLIflags|Openissuefirst|
+|**LargeFeatures**|Newcommands,protocolchanges|RFCrequired|
 
-### Before You Start
+###BeforeYouStart
 
-1. **Check existing issues** - Someone may already be working on it
-2. **Read the docs** - Understand the architecture and design decisions
-3. **Ask questions** - Open a discussion if unsure
+1.**Checkexistingissues**-Someonemayalreadybeworkingonit
+2.**Readthedocs**-Understandthearchitectureanddesigndecisions
+3.**Askquestions**-Openadiscussionifunsure
 
 ---
 
-## Development Setup
+##DevelopmentSetup
 
-### Prerequisites
+###Prerequisites
 
-- **Node.js**: 20.x or later
-- **npm**: 10.x or later
-- **Git**: 2.x or later
+-**Node.js**:20.xorlater
+-**npm**:10.xorlater
+-**Git**:2.xorlater
 
-### Clone and Install
+###CloneandInstall
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourorg/udb.git
-cd udb
+#Clonetherepository
+git clone https://github.com/Mukesh-SCS/universal_device_bridge.git
+cdudb
 
-# Install root dependencies
-npm install
+#Installrootdependencies
+npminstall
 
-# Install component dependencies
-npm install --prefix cli
-npm install --prefix client
-npm install --prefix protocol
-npm install --prefix daemon/linux
+#Installcomponentdependencies
+npminstall--prefixcli
+npminstall--prefixclient
+npminstall--prefixprotocol
+npminstall--prefixdaemon/linux
 ```
 
-### Project Structure
+###ProjectStructure
 
 ```
 udb/
-├── cli/              # Command-line interface
-├── client/           # JavaScript client library
-├── protocol/         # Wire protocol implementation
-├── daemon/           # Device daemon implementations
-│   ├── linux/        # Full Linux daemon
-│   ├── mcu/          # Microcontroller daemon
-│   └── simulator/    # Test simulator
-├── transport/        # Transport layer abstractions
-├── auth/             # Authentication modules
-├── scripts/          # Build and utility scripts
-├── ci/               # CI/CD configurations
-├── docs/             # Documentation
-└── examples/         # Usage examples
+├──cli/#Command-lineinterface
+├──client/#JavaScriptclientlibrary
+├──protocol/#Wireprotocolimplementation
+├──daemon/#Devicedaemonimplementations
+│├──linux/#FullLinuxdaemon
+│├──mcu/#Microcontrollerdaemon
+│└──simulator/#Testsimulator
+├──transport/#Transportlayerabstractions
+├──auth/#Authenticationmodules
+├──scripts/#Buildandutilityscripts
+├──ci/#CI/CDconfigurations
+├──docs/#Documentation
+└──examples/#Usageexamples
 ```
 
-### Running Tests
+###RunningTests
 
 ```bash
-# Run all tests
-npm test
+#Runalltests
+npmtest
 
-# Run specific test file
-node --test protocol/src/messages.test.js
+#Runspecifictestfile
+node--testprotocol/src/messages.test.js
 
-# Run with verbose output
-npm test -- --test-reporter=spec
+#Runwithverboseoutput
+npmtest----test-reporter=spec
 
-# Run smoke tests (CI validation)
-node ci/smoke-test.js
+#Runsmoketests(CIvalidation)
+nodeci/smoke-test.js
 ```
 
-### Building Binaries
+###BuildingBinaries
 
 ```bash
-# Build for current platform
-npm run build
+#Buildforcurrentplatform
+npmrunbuild
 
-# Build for all platforms
-npm run build:all
+#Buildforallplatforms
+npmrunbuild:all
 ```
 
 ---
 
-## How to Contribute
+##HowtoContribute
 
-### Reporting Bugs
+###ReportingBugs
 
-Create an issue with:
+Createanissuewith:
 
-1. **Title**: Clear, concise summary
-2. **Environment**: OS, Node.js version, UDB version
-3. **Steps to Reproduce**: Minimal steps to trigger the bug
-4. **Expected Behavior**: What should happen
-5. **Actual Behavior**: What actually happens
-6. **Logs/Output**: Error messages, stack traces
+1.**Title**:Clear,concisesummary
+2.**Environment**:OS,Node.jsversion,UDBversion
+3.**StepstoReproduce**:Minimalstepstotriggerthebug
+4.**ExpectedBehavior**:Whatshouldhappen
+5.**ActualBehavior**:Whatactuallyhappens
+6.**Logs/Output**:Errormessages,stacktraces
 
-### Suggesting Features
+###SuggestingFeatures
 
-Open a discussion (not issue) with:
+Openadiscussion(notissue)with:
 
-1. **Problem Statement**: What problem does this solve?
-2. **Proposed Solution**: How would it work?
-3. **Alternatives**: What else did you consider?
-4. **Scope**: Is this a CLI, client, or protocol change?
+1.**ProblemStatement**:Whatproblemdoesthissolve?
+2.**ProposedSolution**:Howwoulditwork?
+3.**Alternatives**:Whatelsedidyouconsider?
+4.**Scope**:IsthisaCLI,client,orprotocolchange?
 
-### Writing Code
+###WritingCode
 
-1. **Fork** the repository
-2. **Create a branch** from `main`: `git checkout -b fix/issue-123`
-3. **Make changes** following coding standards
-4. **Add tests** for new functionality
-5. **Run tests** to ensure nothing breaks
-6. **Commit** with clear messages
-7. **Push** and open a pull request
+1.**Fork**therepository
+2.**Createabranch**from`main`:`gitcheckout-bfix/issue-123`
+3.**Makechanges**followingcodingstandards
+4.**Addtests**fornewfunctionality
+5.**Runtests**toensurenothingbreaks
+6.**Commit**withclearmessages
+7.**Push**andopenapullrequest
 
 ---
 
-## Pull Request Process
+##PullRequestProcess
 
-### PR Requirements
+###PRRequirements
 
-- [ ] All tests pass
-- [ ] Code follows style guidelines
-- [ ] Documentation updated (if applicable)
-- [ ] Commit messages are clear
-- [ ] No unrelated changes included
+-[]Alltestspass
+-[]Codefollowsstyleguidelines
+-[]Documentationupdated(ifapplicable)
+-[]Commitmessagesareclear
+-[]Nounrelatedchangesincluded
 
-### PR Title Format
+###PRTitleFormat
 
 ```
-<type>(<scope>): <description>
+<type>(<scope>):<description>
 
-Types: feat, fix, docs, style, refactor, test, chore
-Scopes: cli, client, protocol, daemon, transport, auth
+Types:feat,fix,docs,style,refactor,test,chore
+Scopes:cli,client,protocol,daemon,transport,auth
 ```
 
 Examples:
-- `feat(cli): add --timeout flag to exec command`
-- `fix(client): handle connection timeout correctly`
-- `docs: update API examples for push/pull`
+-`feat(cli):add--timeoutflagtoexeccommand`
+-`fix(client):handleconnectiontimeoutcorrectly`
+-`docs:updateAPIexamplesforpush/pull`
 
-### Review Process
+###ReviewProcess
 
-1. **Automated checks** run (tests, linting)
-2. **Maintainer review** within 1 week
-3. **Address feedback** or discuss alternatives
-4. **Approval and merge** by maintainer
+1.**Automatedchecks**run(tests,linting)
+2.**Maintainerreview**within1week
+3.**Addressfeedback**ordiscussalternatives
+4.**Approvalandmerge**bymaintainer
 
-### Merge Strategy
+###MergeStrategy
 
-- **Squash merge** for most PRs (clean history)
-- **Merge commit** for large features with meaningful commits
-- **Rebase** rarely, for very clean single-commit changes
+-**Squashmerge**formostPRs(cleanhistory)
+-**Mergecommit**forlargefeatureswithmeaningfulcommits
+-**Rebase**rarely,forverycleansingle-commitchanges
 
 ---
 
-## Coding Standards
+##CodingStandards
 
-### JavaScript Style
+###JavaScriptStyle
 
-We follow a minimal, consistent style:
+Wefollowaminimal,consistentstyle:
 
 ```javascript
-// Use ES modules
-import fs from "node:fs";
+//UseESmodules
+importfsfrom"node:fs";
 
-// Prefer const, use let when needed, never var
-const config = loadConfig();
-let counter = 0;
+//Preferconst,useletwhenneeded,nevervar
+constconfig=loadConfig();
+letcounter=0;
 
-// Use async/await over raw promises
-async function fetchData() {
-  const result = await client.exec("command");
-  return result;
+//Useasync/awaitoverrawpromises
+asyncfunctionfetchData(){
+constresult=awaitclient.exec("command");
+returnresult;
 }
 
-// Use explicit comparisons
-if (value === null) { ... }
-if (items.length === 0) { ... }
+//Useexplicitcomparisons
+if(value===null){...}
+if(items.length===0){...}
 
-// Error handling with specific types
-try {
-  await riskyOperation();
-} catch (err) {
-  if (err.code === 'ECONNREFUSED') {
-    throw new ConnectionError(address, err);
-  }
-  throw err;
+//Errorhandlingwithspecifictypes
+try{
+awaitriskyOperation();
+}catch(err){
+if(err.code==='ECONNREFUSED'){
+thrownewConnectionError(address,err);
+}
+throwerr;
 }
 ```
 
-### Naming Conventions
+###NamingConventions
 
-| Element | Convention | Example |
+|Element|Convention|Example|
 |---------|-----------|---------|
-| Files | kebab-case | `device-manager.js` |
-| Functions | camelCase | `connectDevice()` |
-| Classes | PascalCase | `DeviceConnection` |
-| Constants | SCREAMING_SNAKE | `DEFAULT_TIMEOUT` |
-| Private | underscore prefix | `_internalState` |
+|Files|kebab-case|`device-manager.js`|
+|Functions|camelCase|`connectDevice()`|
+|Classes|PascalCase|`DeviceConnection`|
+|Constants|SCREAMING_SNAKE|`DEFAULT_TIMEOUT`|
+|Private|underscoreprefix|`_internalState`|
 
-### Error Handling
+###ErrorHandling
 
-- Throw specific error types (see `client/src/index.js`)
-- Include context in error messages
-- Use error codes for programmatic handling
-- Never swallow errors silently
+-Throwspecificerrortypes(see`client/src/index.js`)
+-Includecontextinerrormessages
+-Useerrorcodesforprogrammatichandling
+-Neverswallowerrorssilently
 
-### Comments
+###Comments
 
 ```javascript
-// Good: Explains WHY
-// Retry with backoff to handle transient network issues
-await retry(connect, { maxAttempts: 3, backoff: 1000 });
+//Good:ExplainsWHY
+//Retrywithbackofftohandletransientnetworkissues
+awaitretry(connect,{maxAttempts:3,backoff:1000});
 
-// Bad: Explains WHAT (obvious from code)
-// Increment counter by 1
+//Bad:ExplainsWHAT(obviousfromcode)
+//Incrementcounterby1
 counter++;
 ```
 
 ---
 
-## Testing
+##Testing
 
-### Test Framework
+###TestFramework
 
-We use Node.js built-in test runner:
+WeuseNode.jsbuilt-intestrunner:
 
 ```javascript
-import { describe, it, beforeEach, mock } from "node:test";
-import assert from "node:assert";
+import{describe,it,beforeEach,mock}from"node:test";
+importassertfrom"node:assert";
 
-describe("MyModule", () => {
-  beforeEach(() => {
-    // Setup
-  });
+describe("MyModule",()=>{
+beforeEach(()=>{
+//Setup
+});
 
-  it("should do something", async () => {
-    const result = await myFunction();
-    assert.strictEqual(result, expected);
-  });
+it("shoulddosomething",async()=>{
+constresult=awaitmyFunction();
+assert.strictEqual(result,expected);
+});
 });
 ```
 
-### Test Categories
+###TestCategories
 
-| Category | Location | Purpose |
+|Category|Location|Purpose|
 |----------|----------|---------|
-| Unit | `*.test.js` next to source | Test individual functions |
-| Integration | `test/integration/` | Test component interaction |
-| Smoke | `ci/smoke-test.js` | Quick validation for CI |
+|Unit|`*.test.js`nexttosource|Testindividualfunctions|
+|Integration|`test/integration/`|Testcomponentinteraction|
+|Smoke|`ci/smoke-test.js`|QuickvalidationforCI|
 
-### Coverage Goals
+###CoverageGoals
 
-- **Protocol**: 100% coverage (critical path)
-- **Client**: 90%+ coverage
-- **CLI**: 80%+ coverage (tested via smoke tests)
-- **Daemon**: 80%+ coverage
+-**Protocol**:100%coverage(criticalpath)
+-**Client**:90%+coverage
+-**CLI**:80%+coverage(testedviasmoketests)
+-**Daemon**:80%+coverage
 
 ---
 
-## Documentation
+##Documentation
 
-### What Needs Docs
+###WhatNeedsDocs
 
-- All public APIs
-- CLI commands and flags
-- Configuration options
-- Protocol changes
-- Architecture decisions
+-AllpublicAPIs
+-CLIcommandsandflags
+-Configurationoptions
+-Protocolchanges
+-Architecturedecisions
 
-### Documentation Locations
+###DocumentationLocations
 
-| Type | Location |
+|Type|Location|
 |------|----------|
-| API Reference | `client/API.md` |
-| CLI Reference | `cli/src/udb.js` (--help) |
-| Architecture | `docs/architecture.md` |
-| Protocol | `protocol/spec.md` |
-| Examples | `examples/` |
+|APIReference|`client/API.md`|
+|CLIReference|`cli/src/udb.js`(--help)|
+|Architecture|`docs/architecture.md`|
+|Protocol|`protocol/spec.md`|
+|Examples|`examples/`|
 
-### Doc Style
+###DocStyle
 
-- Use present tense ("Returns..." not "Will return...")
-- Include code examples
-- Keep examples minimal but complete
-- Update docs in the same PR as code changes
+-Usepresenttense("Returns..."not"Willreturn...")
+-Includecodeexamples
+-Keepexamplesminimalbutcomplete
+-UpdatedocsinthesamePRascodechanges
 
 ---
 
-## Release Process
+##ReleaseProcess
 
-### Versioning
+###Versioning
 
-We follow [Semantic Versioning](https://semver.org/):
+Wefollow[SemanticVersioning](https://semver.org/):
 
-- **MAJOR**: Breaking changes
-- **MINOR**: New features (backward compatible)
-- **PATCH**: Bug fixes
+-**MAJOR**:Breakingchanges
+-**MINOR**:Newfeatures(backwardcompatible)
+-**PATCH**:Bugfixes
 
-### Release Steps (Maintainers)
+###ReleaseSteps(Maintainers)
 
-1. Update `CHANGELOG.md`
-2. Update version in `package.json`
-3. Commit: `chore: release v0.5.0`
-4. Tag: `git tag v0.5.0`
-5. Push: `git push origin main --tags`
-6. GitHub Actions builds and publishes
+1.Update`CHANGELOG.md`
+2.Updateversionin`package.json`
+3.Commit:`chore:releasev0.5.0`
+4.Tag:`gittagv0.5.0`
+5.Push:`gitpushoriginmain--tags`
+6.GitHubActionsbuildsandpublishes
 
-### Pre-release Versions
+###Pre-releaseVersions
 
-For testing before stable release:
+Fortestingbeforestablerelease:
 
 ```bash
-# Beta
-npm version 0.5.0-beta.1
+#Beta
+npmversion0.5.0-beta.1
 
-# Release candidate
-npm version 0.5.0-rc.1
+#Releasecandidate
+npmversion0.5.0-rc.1
 ```
 
 ---
 
-## Governance
+##Governance
 
-### Decision Making
+###DecisionMaking
 
-| Decision Type | Process |
+|DecisionType|Process|
 |--------------|---------|
-| Bug fixes | Maintainer discretion |
-| Minor features | Issue discussion + maintainer approval |
-| Major features | RFC in Discussions + consensus |
-| Breaking changes | RFC + 2-week comment period |
-| Protocol changes | RFC + extensive review + FROZEN after v1 |
+|Bugfixes|Maintainerdiscretion|
+|Minorfeatures|Issuediscussion+maintainerapproval|
+|Majorfeatures|RFCinDiscussions+consensus|
+|Breakingchanges|RFC+2-weekcommentperiod|
+|Protocolchanges|RFC+extensivereview+FROZENafterv1|
 
-### RFC Process
+###RFCProcess
 
-For significant changes:
+Forsignificantchanges:
 
-1. Open a Discussion with `[RFC]` prefix
-2. Describe the proposal in detail
-3. Gather community feedback (minimum 1 week)
-4. Address concerns and iterate
-5. Maintainer makes final decision
-6. Document decision in `docs/decisions/`
+1.OpenaDiscussionwith`[RFC]`prefix
+2.Describetheproposalindetail
+3.Gathercommunityfeedback(minimum1week)
+4.Addressconcernsanditerate
+5.Maintainermakesfinaldecision
+6.Documentdecisionin`docs/decisions/`
 
-### Maintainers
+###Maintainers
 
-Current maintainers:
+Currentmaintainers:
 
-- TBD (Update with actual maintainers)
+-TBD(Updatewithactualmaintainers)
 
-Maintainers are responsible for:
-- Reviewing and merging PRs
-- Triaging issues
-- Making release decisions
-- Enforcing code of conduct
+Maintainersareresponsiblefor:
+-ReviewingandmergingPRs
+-Triagingissues
+-Makingreleasedecisions
+-Enforcingcodeofconduct
 
-### Becoming a Maintainer
+###BecomingaMaintainer
 
-Regular contributors may be invited to become maintainers based on:
-- Quality of contributions
-- Community engagement
-- Alignment with project values
-- Time availability
-
----
-
-## License
-
-By contributing, you agree that your contributions will be licensed under the project's license (see [LICENSE](LICENSE)).
+Regularcontributorsmaybeinvitedtobecomemaintainersbasedon:
+-Qualityofcontributions
+-Communityengagement
+-Alignmentwithprojectvalues
+-Timeavailability
 
 ---
 
-## Questions?
+##License
 
-- **General questions**: Open a Discussion
-- **Bug reports**: Open an Issue
-- **Security issues**: See [SECURITY.md](SECURITY.md)
+Bycontributing,youagreethatyourcontributionswillbelicensedundertheproject'slicense(see[LICENSE](LICENSE)).
 
-Thank you for contributing! 🙏
+---
+
+##Questions?
+
+-**Generalquestions**:OpenaDiscussion
+-**Bugreports**:OpenanIssue
+-**Securityissues**:See[SECURITY.md](SECURITY.md)
+
+Thankyouforcontributing!🙏

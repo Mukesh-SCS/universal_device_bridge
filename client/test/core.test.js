@@ -28,9 +28,9 @@ import {
 
 describe("parseTarget", () => {
   it("should parse ip:port format", () => {
-    const target = parseTarget("192.168.1.100:9910");
+    const target = parseTarget("10.0.0.1:9910");
     
-    assert.strictEqual(target.host, "192.168.1.100");
+    assert.strictEqual(target.host, "10.0.0.1");
     assert.strictEqual(target.port, 9910);
   });
 
@@ -57,7 +57,7 @@ describe("parseTarget", () => {
 
   it("should throw on invalid format - missing port", () => {
     assert.throws(() => {
-      parseTarget("192.168.1.100");
+      parseTarget("10.0.0.1");
     }, UdbError);
   });
 
@@ -69,7 +69,7 @@ describe("parseTarget", () => {
 
   it("should throw on invalid tcp URL - missing port", () => {
     assert.throws(() => {
-      parseTarget("tcp://192.168.1.100");
+      parseTarget("tcp://10.0.0.1");
     }, UdbError);
   });
 });
@@ -103,12 +103,12 @@ describe("Error classes", () => {
 
   describe("ConnectionError", () => {
     it("should create connection error with details", () => {
-      const err = new ConnectionError("Connection refused", { host: "192.168.1.1" });
+      const err = new ConnectionError("Connection refused", { host: "10.0.0.1" });
       
       assert.strictEqual(err.message, "Connection refused");
       assert.strictEqual(err.code, "CONNECTION_FAILED");
       assert.strictEqual(err.name, "ConnectionError");
-      assert.strictEqual(err.details.host, "192.168.1.1");
+      assert.strictEqual(err.details.host, "10.0.0.1");
     });
   });
 
@@ -171,10 +171,10 @@ describe("Context management", () => {
   });
 
   it("should add and get context", () => {
-    addContext("test-lab", { host: "192.168.1.100", port: 9910, name: "lab-device" });
+    addContext("test-lab", { host: "10.0.0.1", port: 9910, name: "lab-device" });
     
     const ctx = getContext("test-lab");
-    assert.strictEqual(ctx.host, "192.168.1.100");
+    assert.strictEqual(ctx.host, "10.0.0.1");
     assert.strictEqual(ctx.port, 9910);
     assert.strictEqual(ctx.name, "lab-device");
   });
@@ -191,7 +191,7 @@ describe("Context management", () => {
 
   it("should set and get current context", () => {
     setConfig({ contexts: {} }); // Reset
-    addContext("primary", { host: "192.168.1.1", port: 9910 });
+    addContext("primary", { host: "10.0.0.1", port: 9910 });
     
     setCurrentContext("primary");
     

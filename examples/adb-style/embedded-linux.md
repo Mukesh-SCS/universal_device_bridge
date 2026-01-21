@@ -1,42 +1,42 @@
-# Embedded Linux (Raspberry Pi, BeagleBone, etc.)
+#EmbeddedLinux(RaspberryPi,BeagleBone,etc.)
 
-## Setup
+##Setup
 
-1. Install UDB daemon on device:
+1.InstallUDBdaemonondevice:
 ```bash
-npm install -g @udb/daemon
-udbd --name "pi-lab"
+npminstall-g@udb/daemon
+udbd--name"pi-lab"
 ```
 
-2. From your workstation:
+2.Fromyourworkstation:
 ```bash
-udb connect pi.local:9910
+udbconnectpi.local:9910
 ```
 
-## Usage
+##Usage
 
 ```bash
-# Open shell
-udb shell
+#Openshell
+udbshell
 
-# Run command
-udb exec "uname -a"
+#Runcommand
+udbexec"uname-a"
 
-# Deploy application
-udb push ./build/app /opt/myapp/app
-udb exec "systemctl restart myapp"
+#Deployapplication
+udbpush./build/app/opt/myapp/app
+udbexec"systemctlrestartmyapp"
 
-# View logs
-udb exec "journalctl -f -u myapp"
+#Viewlogs
+udbexec"journalctl-f-umyapp"
 ```
 
-## Output
+##Output
 
 ```
-$ udb devices
-NAME             TYPE              TARGET                   STATUS
-pi-lab           embedded-linux    192.168.1.100:9910      online
+$udbdevices
+NAMETYPETARGETSTATUS
+pi-labembedded-linux10.0.0.1:9910online
 
-$ udb shell
-pi-lab:~$ 
+$udbshell
+pi-lab:~$
 ```

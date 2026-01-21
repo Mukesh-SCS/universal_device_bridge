@@ -1,244 +1,244 @@
-# UDB Protocol Specification
+#UDBProtocolSpecification
 
-This document describes the wire protocol for Universal Device Bridge.
-
----
-
-## Overview
-
-UDB uses a simple length-prefixed JSON protocol over TCP. All messages are JSON objects with a `type` field indicating the message type.
+ThisdocumentdescribesthewireprotocolforUniversalDeviceBridge.
 
 ---
 
-## Frame Format
+##Overview
+
+UDBusesasimplelength-prefixedJSONprotocoloverTCP.AllmessagesareJSONobjectswitha`type`fieldindicatingthemessagetype.
+
+---
+
+##FrameFormat
 
 ```
 ┌─────────────────────────────────────────────┐
-│  4 bytes (BE)  │  N bytes                   │
-│  Payload Len   │  JSON Payload (UTF-8)      │
+│4bytes(BE)│Nbytes│
+│PayloadLen│JSONPayload(UTF-8)│
 └─────────────────────────────────────────────┘
 ```
 
-- **Length**: 4-byte big-endian unsigned integer
-- **Payload**: UTF-8 encoded JSON object
+-**Length**:4-bytebig-endianunsignedinteger
+-**Payload**:UTF-8encodedJSONobject
 
 ---
 
-## Message Types
+##MessageTypes
 
-### Connection & Authentication
+###Connection&Authentication
 
-| Type | Direction | Description |
+|Type|Direction|Description|
 |------|-----------|-------------|
-| `hello` | Client → Device | Initial connection with client name and public key |
-| `hello_ok` | Device → Client | Connection accepted |
-| `auth_required` | Device → Client | Client not paired, pairing required |
-| `auth_challenge` | Device → Client | Authentication challenge with nonce |
-| `auth_response` | Client → Device | Signed nonce response |
-| `auth_ok` | Device → Client | Authentication successful |
-| `auth_fail` | Device → Client | Authentication failed |
+|`hello`|Client→Device|Initialconnectionwithclientnameandpublickey|
+|`hello_ok`|Device→Client|Connectionaccepted|
+|`auth_required`|Device→Client|Clientnotpaired,pairingrequired|
+|`auth_challenge`|Device→Client|Authenticationchallengewithnonce|
+|`auth_response`|Client→Device|Signednonceresponse|
+|`auth_ok`|Device→Client|Authenticationsuccessful|
+|`auth_fail`|Device→Client|Authenticationfailed|
 
-### Pairing
+###Pairing
 
-| Type | Direction | Description |
+|Type|Direction|Description|
 |------|-----------|-------------|
-| `pair_request` | Client → Device | Request to pair |
-| `pair_ok` | Device → Client | Pairing successful with fingerprint |
-| `pair_denied` | Device → Client | Pairing denied |
-| `unpair_request` | Client → Device | Request to unpair |
-| `unpair_ok` | Device → Client | Unpair successful |
-| `unpair_all` | Client → Device | Remove all paired clients |
+|`pair_request`|Client→Device|Requesttopair|
+|`pair_ok`|Device→Client|Pairingsuccessfulwithfingerprint|
+|`pair_denied`|Device→Client|Pairingdenied|
+|`unpair_request`|Client→Device|Requesttounpair|
+|`unpair_ok`|Device→Client|Unpairsuccessful|
+|`unpair_all`|Client→Device|Removeallpairedclients|
 
-### Command Execution
+###CommandExecution
 
-| Type | Direction | Description |
+|Type|Direction|Description|
 |------|-----------|-------------|
-| `exec` | Client → Device | Execute command |
-| `exec_result` | Device → Client | Command result with stdout/stderr/code |
+|`exec`|Client→Device|Executecommand|
+|`exec_result`|Device→Client|Commandresultwithstdout/stderr/code|
 
-### File Transfer
+###FileTransfer
 
-| Type | Direction | Description |
+|Type|Direction|Description|
 |------|-----------|-------------|
-| `push_begin` | Client → Device | Start file push, includes remotePath |
-| `push_chunk` | Client → Device | File chunk (base64 encoded) |
-| `push_end` | Client → Device | End file push |
-| `push_ready` | Device → Client | Ready to receive chunks |
-| `push_ack` | Device → Client | Chunk received acknowledgment |
-| `push_ok` | Device → Client | Push completed successfully |
-| `pull_begin` | Client → Device | Request file pull, includes remotePath |
-| `pull_chunk` | Device → Client | File chunk (base64 encoded) |
-| `pull_end` | Device → Client | End of file |
+|`push_begin`|Client→Device|Startfilepush,includesremotePath|
+|`push_chunk`|Client→Device|Filechunk(base64encoded)|
+|`push_end`|Client→Device|Endfilepush|
+|`push_ready`|Device→Client|Readytoreceivechunks|
+|`push_ack`|Device→Client|Chunkreceivedacknowledgment|
+|`push_ok`|Device→Client|Pushcompletedsuccessfully|
+|`pull_begin`|Client→Device|Requestfilepull,includesremotePath|
+|`pull_chunk`|Device→Client|Filechunk(base64encoded)|
+|`pull_end`|Device→Client|Endoffile|
 
-### Status & Discovery
+###Status&Discovery
 
-| Type | Direction | Description |
+|Type|Direction|Description|
 |------|-----------|-------------|
-| `status` | Client → Device | Request device status |
-| `status_result` | Device → Client | Device status info |
-| `list_paired` | Client → Device | List paired clients |
-| `list_paired_result` | Device → Client | Paired clients list |
+|`status`|Client→Device|Requestdevicestatus|
+|`status_result`|Device→Client|Devicestatusinfo|
+|`list_paired`|Client→Device|Listpairedclients|
+|`list_paired_result`|Device→Client|Pairedclientslist|
 
-### Errors
+###Errors
 
-| Type | Direction | Description |
+|Type|Direction|Description|
 |------|-----------|-------------|
-| `error` | Device → Client | Error response with error code |
+|`error`|Device→Client|Errorresponsewitherrorcode|
 
 ---
 
-## Message Details
+##MessageDetails
 
-### hello
+###hello
 
 ```json
 {
-  "type": "hello",
-  "clientName": "my-client",
-  "pubKey": "-----BEGIN PUBLIC KEY-----\n..."
+"type":"hello",
+"clientName":"my-client",
+"pubKey":"-----BEGINPUBLICKEY-----\n..."
 }
 ```
 
-### auth_challenge
+###auth_challenge
 
 ```json
 {
-  "type": "auth_challenge",
-  "nonce": "base64-encoded-random-bytes"
+"type":"auth_challenge",
+"nonce":"base64-encoded-random-bytes"
 }
 ```
 
-### auth_response
+###auth_response
 
 ```json
 {
-  "type": "auth_response",
-  "signatureB64": "base64-encoded-signature"
+"type":"auth_response",
+"signatureB64":"base64-encoded-signature"
 }
 ```
 
-### exec
+###exec
 
 ```json
 {
-  "type": "exec",
-  "cmd": "whoami"
+"type":"exec",
+"cmd":"whoami"
 }
 ```
 
-### exec_result
+###exec_result
 
 ```json
 {
-  "type": "exec_result",
-  "stdout": "user\n",
-  "stderr": "",
-  "code": 0
+"type":"exec_result",
+"stdout":"user\n",
+"stderr":"",
+"code":0
 }
 ```
 
-### push_begin
+###push_begin
 
 ```json
 {
-  "type": "push_begin",
-  "remotePath": "/tmp/file.txt"
+"type":"push_begin",
+"remotePath":"/tmp/file.txt"
 }
 ```
 
-### push_chunk
+###push_chunk
 
 ```json
 {
-  "type": "push_chunk",
-  "b64": "base64-encoded-data"
+"type":"push_chunk",
+"b64":"base64-encoded-data"
 }
 ```
 
-### pull_begin
+###pull_begin
 
 ```json
 {
-  "type": "pull_begin",
-  "remotePath": "/tmp/file.txt"
+"type":"pull_begin",
+"remotePath":"/tmp/file.txt"
 }
 ```
 
-### status_result
+###status_result
 
 ```json
 {
-  "type": "status_result",
-  "deviceName": "my-device",
-  "pairingMode": "auto",
-  "execEnabled": true,
-  "pairedCount": 2
+"type":"status_result",
+"deviceName":"my-device",
+"pairingMode":"auto",
+"execEnabled":true,
+"pairedCount":2
 }
 ```
 
-### error
+###error
 
 ```json
 {
-  "type": "error",
-  "error": "error_code",
-  "detail": "Human readable message"
+"type":"error",
+"error":"error_code",
+"detail":"Humanreadablemessage"
 }
 ```
 
 ---
 
-## Discovery Protocol (UDP)
+##DiscoveryProtocol(UDP)
 
-Separate from TCP, used for device discovery on local network.
+SeparatefromTCP,usedfordevicediscoveryonlocalnetwork.
 
-### Request (Client → Broadcast)
+###Request(Client→Broadcast)
 
 ```
 UDB_DISCOVER_V1
 ```
 
-Plain text string sent to UDP port 9909.
+PlaintextstringsenttoUDPport9909.
 
-### Response (Device → Client)
+###Response(Device→Client)
 
 ```json
 {
-  "name": "device-name",
-  "tcpPort": 9910,
-  "udpPort": 9909
+"name":"device-name",
+"tcpPort":9910,
+"udpPort":9909
 }
 ```
 
 ---
 
-## Security
+##Security
 
-### Keypair
+###Keypair
 
-- Algorithm: Ed25519
-- Client generates keypair on first run
-- Stored in `~/.udb/keypair.json`
+-Algorithm:Ed25519
+-Clientgenerateskeypaironfirstrun
+-Storedin`~/.udb/keypair.json`
 
-### Fingerprint
+###Fingerprint
 
-- SHA-256 hash of public key PEM
-- First 16 hex characters used as identifier
+-SHA-256hashofpublickeyPEM
+-First16hexcharactersusedasidentifier
 
-### Authentication Flow
+###AuthenticationFlow
 
-1. Client sends HELLO with public key
-2. If paired: Device sends AUTH_CHALLENGE with random nonce
-3. Client signs nonce with private key
-4. Client sends AUTH_RESPONSE with signature
-5. Device verifies signature matches stored public key
-6. If valid: AUTH_OK, else: AUTH_FAIL
+1.ClientsendsHELLOwithpublickey
+2.Ifpaired:DevicesendsAUTH_CHALLENGEwithrandomnonce
+3.Clientsignsnoncewithprivatekey
+4.ClientsendsAUTH_RESPONSEwithsignature
+5.Deviceverifiessignaturematchesstoredpublickey
+6.Ifvalid:AUTH_OK,else:AUTH_FAIL
 
 ---
 
-## Ports
+##Ports
 
-| Port | Protocol | Purpose |
+|Port|Protocol|Purpose|
 |------|----------|---------|
-| 9909 | UDP | Discovery broadcasts |
-| 9910 | TCP | Control connection |
+|9909|UDP|Discoverybroadcasts|
+|9910|TCP|Controlconnection|

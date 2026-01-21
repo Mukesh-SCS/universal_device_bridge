@@ -2,33 +2,23 @@
 
 Complete reference for the Universal Device Bridge programmatic API.
 
-## API Stability
-
-All APIs in this document are marked with stability levels:
-
-| Marker | Meaning |
-|--------|---------|
-| ✅ **Stable** | API is frozen, backward compatible changes only |
-| 🔶 **Beta** | API may change in minor versions |
-| ⚠️ **Internal** | Not for external use, may change without notice |
-
 ## Table of Contents
 
-1. [Discovery & Connection](#discovery--connection) ✅
-2. [Core Operations](#core-operations) ✅
-3. [Context Management](#context-management) ✅
-4. [Sessions](#sessions) ✅
-5. [Batch Operations](#batch-operations) 🔶
-6. [Fleet Management](#fleet-management) ✅
-7. [Error Handling](#error-handling) ✅
-8. [Configuration](#configuration) ✅
-9. [Transport Layer](#transport-layer) 🔶
+1. [Discovery & Connection](#discovery--connection)
+2. [Core Operations](#core-operations)
+3. [Context Management](#context-management)
+4. [Sessions](#sessions)
+5. [Batch Operations](#batch-operations)
+6. [Fleet Management](#fleet-management)
+7. [Error Handling](#error-handling)
+8. [Configuration](#configuration)
+9. [Transport Layer](#transport-layer)
 
 ---
 
-## Discovery & Connection ✅
+## Discovery & Connection
 
-### `discoverDevices(timeoutMs?)` ✅
+### `discoverDevices(timeoutMs?)`
 
 Discover devices on the local network via UDP broadcast.
 
@@ -37,8 +27,8 @@ import { discoverDevices } from "@udb/client";
 
 const devices = await discoverDevices();
 // [
-//   { host: "192.168.1.100", port: 9910, name: "lab-device-1" },
-//   { host: "192.168.1.101", port: 9910, name: "lab-device-2" }
+//   { host: "10.0.0.1", port: 9910, name: "lab-device-1" },
+//   { host: "10.0.0.2", port: 9910, name: "lab-device-2" }
 // ]
 ```
 
@@ -58,11 +48,11 @@ Parse a target string into `{ host, port }` format.
 ```javascript
 import { parseTarget } from "@udb/client";
 
-const t1 = parseTarget("192.168.1.100:9910");
-// { host: "192.168.1.100", port: 9910 }
+const t1 = parseTarget("10.0.0.1:9910");
+// { host: "10.0.0.1", port: 9910 }
 
-const t2 = parseTarget("tcp://192.168.1.100:9910");
-// { host: "192.168.1.100", port: 9910 }
+const t2 = parseTarget("tcp://10.0.0.1:9910");
+// { host: "10.0.0.1", port: 9910 }
 ```
 
 **Parameters:**
@@ -82,7 +72,7 @@ Resolve a target from explicit argument, current context, last target, or discov
 import { resolveTarget } from "@udb/client";
 
 // Explicit target
-const t1 = await resolveTarget("192.168.1.100:9910");
+const t1 = await resolveTarget("10.0.0.1:9910");
 
 // From current context (no args)
 const t2 = await resolveTarget();
@@ -113,7 +103,7 @@ Test TCP connectivity to a target.
 ```javascript
 import { probeTcp } from "@udb/client";
 
-const reachable = await probeTcp({ host: "192.168.1.100", port: 9910 });
+const reachable = await probeTcp({ host: "10.0.0.1", port: 9910 });
 console.log(reachable); // true or false
 ```
 
@@ -136,7 +126,7 @@ Get device status.
 ```javascript
 import { status } from "@udb/client";
 
-const info = await status("192.168.1.100:9910");
+const info = await status("10.0.0.1:9910");
 // {
 //   name: "device-name",
 //   pairingMode: "auto",
@@ -161,7 +151,7 @@ Pair with a device (authorize this client).
 ```javascript
 import { pair } from "@udb/client";
 
-const result = await pair("192.168.1.100:9910");
+const result = await pair("10.0.0.1:9910");
 // { fingerprint: "abc123...", paired: true }
 ```
 
@@ -182,12 +172,12 @@ Unpair from a device.
 import { unpair } from "@udb/client";
 
 // Unpair specific client
-const r1 = await unpair("192.168.1.100:9910", {
+const r1 = await unpair("10.0.0.1:9910", {
   fingerprint: "abc123..."
 });
 
 // Unpair all clients
-const r2 = await unpair("192.168.1.100:9910", { all: true });
+const r2 = await unpair("10.0.0.1:9910", { all: true });
 // { scope: "all", removed: 5, fingerprint: undefined }
 ```
 
@@ -210,7 +200,7 @@ List all paired clients on a device.
 ```javascript
 import { listPaired } from "@udb/client";
 
-const clients = await listPaired("192.168.1.100:9910");
+const clients = await listPaired("10.0.0.1:9910");
 // [
 //   { fp: "abc123...", name: "cli-host", addedAt: "2026-01-07T..." },
 //   { fp: "def456...", name: "script-runner", addedAt: "2026-01-07T..." }
@@ -233,7 +223,7 @@ Execute a command on a device.
 ```javascript
 import { exec } from "@udb/client";
 
-const result = await exec("192.168.1.100:9910", "whoami");
+const result = await exec("10.0.0.1:9910", "whoami");
 // { stdout: "user\n", stderr: "", exitCode: 0 }
 ```
 
@@ -258,7 +248,7 @@ import { getContexts } from "@udb/client";
 
 const contexts = getContexts();
 // {
-//   "lab": { host: "192.168.1.100", port: 9910, name: "lab-device" },
+//   "lab": { host: "10.0.0.1", port: 9910, name: "lab-device" },
 //   "prod": { host: "10.0.0.100", port: 9910, name: "prod-device" }
 // }
 ```
@@ -307,7 +297,7 @@ Add a new context.
 import { addContext } from "@udb/client";
 
 addContext("lab", {
-  host: "192.168.1.100",
+  host: "10.0.0.1",
   port: 9910,
   name: "lab-device"  // optional
 });
@@ -327,7 +317,7 @@ Get a specific context.
 import { getContext } from "@udb/client";
 
 const ctx = getContext("lab");
-// { host: "192.168.1.100", port: 9910, name: "lab-device" }
+// { host: "10.0.0.1", port: 9910, name: "lab-device" }
 ```
 
 **Parameters:**
@@ -361,7 +351,7 @@ Create a persistent session for multiple operations.
 ```javascript
 import { createSession } from "@udb/client";
 
-const session = await createSession("192.168.1.100:9910");
+const session = await createSession("10.0.0.1:9910");
 
 try {
   const info = await session.status();
@@ -452,9 +442,9 @@ Execute the same command on multiple devices.
 import { execBatch } from "@udb/client";
 
 const targets = [
-  "192.168.1.100:9910",
-  "192.168.1.101:9910",
-  "192.168.1.102:9910"
+  "10.0.0.1:9910",
+  "10.0.0.2:9910",
+  "10.0.0.3:9910"
 ];
 
 const results = await execBatch(targets, "uname -a", { parallel: true });
@@ -499,8 +489,8 @@ Create a logical group of devices.
 
 ```javascript
 createGroup("lab", [
-  { host: "192.168.1.100", port: 9910 },
-  { host: "192.168.1.101", port: 9910 }
+  { host: "10.0.0.1", port: 9910 },
+  { host: "10.0.0.2", port: 9910 }
 ]);
 ```
 
@@ -518,7 +508,7 @@ Get devices in a group.
 
 ```javascript
 const devices = getGroup("lab");
-// [{ host: "192.168.1.100", port: 9910 }, ...]
+// [{ host: "10.0.0.1", port: 9910 }, ...]
 ```
 
 **Returns:** `Array<Target>`
@@ -564,7 +554,7 @@ Set labels on a device.
 
 ```javascript
 setLabels(
-  { host: "192.168.1.100", port: 9910 },
+  { host: "10.0.0.1", port: 9910 },
   { env: "production", role: "gateway" }
 );
 ```
@@ -580,7 +570,7 @@ setLabels(
 Get labels for a device.
 
 ```javascript
-const labels = getLabels({ host: "192.168.1.100", port: 9910 });
+const labels = getLabels({ host: "10.0.0.1", port: 9910 });
 // { env: "production", role: "gateway" }
 ```
 
@@ -595,8 +585,8 @@ Find devices matching label query.
 ```javascript
 const devices = findByLabels({ env: "production" });
 // [
-//   { host: "192.168.1.100", port: 9910, labels: {...} },
-//   { host: "192.168.1.101", port: 9910, labels: {...} }
+//   { host: "10.0.0.1", port: 9910, labels: {...} },
+//   { host: "10.0.0.2", port: 9910, labels: {...} }
 // ]
 ```
 
@@ -725,7 +715,7 @@ Set full configuration object.
 import { setConfig } from "@udb/client";
 
 setConfig({
-  lastTarget: { host: "192.168.1.100", port: 9910 },
+  lastTarget: { host: "10.0.0.1", port: 9910 },
   currentContext: "lab",
   contexts: { lab: {...} }
 });

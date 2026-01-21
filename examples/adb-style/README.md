@@ -1,35 +1,35 @@
-# udb-Style UDB Examples
+#udb-StyleUDBExamples
 
-UDB works like Android's udb but for any device. These examples show common workflows.
+UDBworkslikeAndroid'sudbbutforanydevice.Theseexamplesshowcommonworkflows.
 
-## Quick Start
+##QuickStart
 
 ```bash
-# Install UDB
-curl -fsSL https://get.udb.dev | sh
+#InstallUDB
+curl-fsSLhttps://get.udb.dev|sh
 
-# Discover devices
-udb devices
+#Discoverdevices
+udbdevices
 
-# Connect and use
-udb connect 192.168.1.100:9910
-udb shell
+#Connectanduse
+udbconnect10.0.0.1:9910
+udbshell
 ```
 
-## Examples
+##Examples
 
-1. [Embedded Linux](embedded-linux.md) - Raspberry Pi, BeagleBone, etc.
-2. [MCU over Serial](mcu-serial.md) - ESP32, Arduino, STM32
-3. [CI Simulator](ci-simulator.md) - Automated testing
+1.[EmbeddedLinux](embedded-linux.md)-RaspberryPi,BeagleBone,etc.
+2.[MCUoverSerial](mcu-serial.md)-ESP32,Arduino,STM32
+3.[CISimulator](ci-simulator.md)-Automatedtesting
 
-## udb Command Mapping
+##udbCommandMapping
 
-| udb | UDB | Notes |
+|udb|UDB|Notes|
 |-----|-----|-------|
-| `udb devices` | `udb devices` | Lists all devices |
-| `udb connect <ip>` | `udb connect <ip>:9910` | Connects to device |
-| `udb shell` | `udb shell` | Opens interactive shell |
-| `udb push <src> <dst>` | `udb push <src> <dst>` | Pushes file |
-| `udb pull <src> <dst>` | `udb pull <src> <dst>` | Pulls file |
-| `udb start-server` | `udb start-server` | Starts daemon |
-| `udb kill-server` | `udb kill-server` | Stops daemon |
+|`udbdevices`|`udbdevices`|Listsalldevices|
+|`udbconnect<ip>`|`udbconnect<ip>:9910`|Connectstodevice|
+|`udbshell`|`udbshell`|Opensinteractiveshell|
+|`udbpush<src><dst>`|`udbpush<src><dst>`|Pushesfile|
+|`udbpull<src><dst>`|`udbpull<src><dst>`|Pullsfile|
+|`udbstart-server`|`udbstart-server`|Startsdaemon|
+|`udbkill-server`|`udbkill-server`|Stopsdaemon|

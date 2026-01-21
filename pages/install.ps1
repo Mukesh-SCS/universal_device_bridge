@@ -20,11 +20,11 @@
 
 .EXAMPLE
     # Install latest version
-    irm https://raw.githubusercontent.com/yourorg/udb/main/scripts/install.ps1 | iex
+    irm https://udb.pages.dev/install.ps1 | iex
 
 .EXAMPLE
     # Install specific version
-    .\install.ps1 -Version 0.5.0
+    .\install.ps1 -Version 0.7.0
 
 .EXAMPLE
     # Install to custom directory
@@ -40,7 +40,7 @@ param(
 )
 
 # Configuration
-$Repo = "yourorg/udb"  # Update with actual repo
+$Repo = "tripa2020/universal_device_bridge"
 $ErrorActionPreference = "Stop"
 
 function Write-Status {

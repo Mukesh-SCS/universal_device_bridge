@@ -48,6 +48,32 @@ Communication is authenticated using cryptographic keypairs and explicit pairing
 
 ---
 
+## Installation
+
+### One-Line Install
+
+**Linux / macOS:**
+```bash
+curl -fsSL https://udb.dev/install.sh | sh
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://udb.dev/install.ps1 | iex
+```
+
+### npm Install
+
+```bash
+npm install -g @udb/cli
+```
+
+### Manual Download
+
+Download prebuilt binaries from [GitHub Releases](https://github.com/Mukesh-SCS/universal_device_bridge/releases).
+
+---
+
 ## Quick Start 
 
 ### 1. Start the daemon
@@ -67,7 +93,7 @@ udb devices --json
 ### 3. Pair and execute
 
 ```bash
-udb pair 192.168.1.100:9910
+udb pair 10.0.0.1:9910
 udb exec "whoami"
 ```
 
@@ -107,7 +133,7 @@ udb list-paired <ip:port> [--json]
 
 ```bash
 # Save a device as a context
-udb context add lab 192.168.1.100:9910
+udb context add lab 10.0.0.1:9910
 
 # Select active context
 udb context use lab
@@ -119,11 +145,11 @@ udb context list [--json]
 udb exec "whoami"
 ```
 
-### Fleet Management (Phase 3)
+### Fleet Management
 
 ```bash
 # Create a device group
-udb group add lab 192.168.1.100:9910 192.168.1.101:9910
+udb group add lab 10.0.0.1:9910 10.0.0.2:9910
 
 # Execute on entire group
 udb group exec lab "uname -a"
@@ -160,15 +186,15 @@ import { exec, status, pair, discoverDevices } from "@udb/client";
 const devices = await discoverDevices();
 
 // Execute command
-const result = await exec("192.168.1.100:9910", "whoami");
+const result = await exec("10.0.0.1:9910", "whoami");
 console.log(result.stdout); // "user\n"
 
 // Get device status
-const info = await status("192.168.1.100:9910");
+const info = await status("10.0.0.1:9910");
 console.log(info.name); // "device-name"
 
 // Pair with device
-const pair_result = await pair("192.168.1.100:9910");
+const pair_result = await pair("10.0.0.1:9910");
 console.log(pair_result.fingerprint);
 ```
 
@@ -176,7 +202,7 @@ console.log(pair_result.fingerprint);
 
 **Persistent Sessions:**
 ```javascript
-const session = await createSession("192.168.1.100:9910");
+const session = await createSession("10.0.0.1:9910");
 await session.exec("cmd1");
 await session.exec("cmd2");
 await session.close();
@@ -244,31 +270,19 @@ Contexts are stored in `~/.udb/config.json` and work offline.
 
 ---
 
-## Project Status
-
-| Phase | Status | Features |
-|-------|--------|----------|
-| 1 | ✅ Complete | Core CLI, daemon, protocol, security |
-| 2 | ✅ Complete | Contexts, discovery fallback, remote targets |
-| 3 | ✅ Complete | Programmatic API, batch ops, fleet management |
-
-**Current version:** v0.3.0 (Phase 3)
-
----
-
 ## Examples
 
 ### Example 1: Basic execution
 
 ```bash
-udb pair 192.168.1.100:9910
+udb pair 10.0.0.1:9910
 udb exec "uptime"
 ```
 
 ### Example 2: Using contexts
 
 ```bash
-udb context add lab 192.168.1.100:9910
+udb context add lab 10.0.0.1:9910
 udb context use lab
 udb exec "df -h"
 udb status --json
@@ -277,7 +291,7 @@ udb status --json
 ### Example 3: Fleet operation
 
 ```bash
-udb group add lab 192.168.1.100:9910 192.168.1.101:9910 192.168.1.102:9910
+udb group add lab 10.0.0.1:9910 10.0.0.2:9910 10.0.0.3:9910
 udb group exec lab "systemctl status nginx"
 udb inventory --json > fleet.json
 ```
@@ -288,9 +302,9 @@ udb inventory --json > fleet.json
 // See scripts/ folder for full examples
 node scripts/devices.js
 node scripts/exec.js
-node scripts/context.js 192.168.1.100:9910
+node scripts/context.js 10.0.0.1:9910
 node scripts/pair.js
-node scripts/group.js 192.168.1.100:9910
+node scripts/group.js 10.0.0.1:9910
 ```
 
 ---
@@ -301,10 +315,10 @@ UDB stores configuration in `~/.udb/config.json`:
 
 ```json
 {
-  "lastTarget": { "host": "192.168.1.100", "port": 9910 },
+  "lastTarget": { "host": "10.0.0.1", "port": 9910 },
   "currentContext": "lab",
   "contexts": {
-    "lab": { "host": "192.168.1.100", "port": 9910, "name": "lab-device" }
+    "lab": { "host": "10.0.0.1", "port": 9910, "name": "lab-device" }
   }
 }
 ```
@@ -319,10 +333,9 @@ udb config show --json
 
 ## Documentation
 
-- [Testing Guide](test-setup.md) - Complete testing procedure
+- [Documentation](docs/DOCUMENTATION.md) - Complete UDB documentation
 - [API Reference](client/API.md) - Programmatic API details
-- [Architecture](docs/architecture.md)
-- [Roadmap](docs/roadmap.md)
+- [Quick Reference](client/QUICK_REFERENCE.md) - Quick start guide
 
 ---
 

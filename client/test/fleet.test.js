@@ -51,8 +51,8 @@ describe("Fleet Group Management", () => {
   describe("createGroup", () => {
     it("should create a group with target objects", () => {
       const result = createGroup("test-group", [
-        { host: "192.168.1.1", port: 9910 },
-        { host: "192.168.1.2", port: 9910 }
+        { host: "10.0.0.1", port: 9910 },
+        { host: "10.0.0.2", port: 9910 }
       ]);
 
       assert.strictEqual(result.group, "test-group");

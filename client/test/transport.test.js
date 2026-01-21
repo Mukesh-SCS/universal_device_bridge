@@ -94,10 +94,10 @@ describe("Transport abstraction", () => {
     });
 
     it("should provide remote info", () => {
-      const transport = new TcpTransport({ host: "192.168.1.100", port: 9910 });
+      const transport = new TcpTransport({ host: "10.0.0.1", port: 9910 });
       const info = transport.getRemoteInfo();
       
-      assert.strictEqual(info.host, "192.168.1.100");
+      assert.strictEqual(info.host, "10.0.0.1");
       assert.strictEqual(info.port, 9910);
     });
   });
@@ -213,7 +213,7 @@ describe("parseSerialTarget", () => {
   });
 
   it("should throw on invalid format", () => {
-    assert.throws(() => parseSerialTarget("tcp://192.168.1.1:9910"));
+    assert.throws(() => parseSerialTarget("tcp://10.0.0.1:9910"));
     assert.throws(() => parseSerialTarget("COM3"));
   });
 
