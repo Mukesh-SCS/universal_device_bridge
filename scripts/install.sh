@@ -3,7 +3,7 @@
 # UDB Installer for Linux and macOS
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/yourorg/udb/main/scripts/install.sh | bash
+#   curl -fsSL https://udb.pages.dev/install.sh | sh
 #
 # Options:
 #   --version <ver>   Install specific version (default: latest)
@@ -17,7 +17,7 @@ set -euo pipefail
 VERSION="${UDB_VERSION:-latest}"
 INSTALL_DIR="${UDB_INSTALL_DIR:-/usr/local/bin}"
 VERIFY_CHECKSUM=true
-REPO="yourorg/udb"  # Update with actual repo
+REPO="tripa2020/universal_device_bridge"
 
 # Colors
 RED='\033[0;31m'
