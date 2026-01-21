@@ -1,144 +1,131 @@
-# MCU Daemon
+#MCUDaemon
 
-Lightweight UDB daemon for microcontrollers and resource-constrained devices.
+LightweightUDBdaemonformicrocontrollersandresource-constraineddevices.
 
-## Status
+##AvailableImplementations
 
-✅ **Implemented** - Node.js reference implementation available.
+###Node.jsReference(`udbd-mcu.js`)
 
-## Available Implementations
-
-### Node.js Reference (`udbd-mcu.js`)
-
-A minimal Node.js implementation for testing and as a reference for native ports:
+AminimalNode.jsimplementationfortestingandasareferencefornativeports:
 
 ```bash
-node daemon/mcu/udbd-mcu.js --name my-mcu --tcp 9910
+nodedaemon/mcu/udbd-mcu.js--namemy-mcu--tcp9910
 ```
 
 Features:
-- Single-connection model (one client at a time)
-- Minimal memory footprint
-- Built-in commands: help, info, uptime, memory, gpio, reboot
-- Custom command handler support
-- No external dependencies
+-Single-connectionmodel(oneclientatatime)
+-Minimalmemoryfootprint
+-Built-incommands:help,info,uptime,memory,gpio,reboot
+-Customcommandhandlersupport
+-Noexternaldependencies
 
-### Native Ports (Planned)
-
-| Platform | Status | Notes |
-|----------|--------|-------|
-| ESP32 | 🔲 Planned | WiFi-enabled, C/ESP-IDF |
-| ESP8266 | 🔲 Planned | Lighter weight |
-| STM32 | 🔲 Planned | ARM Cortex-M |
-| RP2040 | 🔲 Planned | Pico W for WiFi |
-
-## Quick Start
+##QuickStart
 
 ```bash
-# Start the MCU daemon
-node daemon/mcu/udbd-mcu.js --name test-mcu
+#StarttheMCUdaemon
+nodedaemon/mcu/udbd-mcu.js--nametest-mcu
 
-# In another terminal
-udb pair 127.0.0.1:9910
-udb exec "info"
-udb exec "uptime"
-udb exec "memory"
+#Inanotherterminal
+udbpair127.0.0.1:9910
+udbexec"info"
+udbexec"uptime"
+udbexec"memory"
 ```
 
-## Built-in Commands
+##Built-inCommands
 
-| Command | Description |
+|Command|Description|
 |---------|-------------|
-| `help` | List available commands |
-| `info` | Device information |
-| `uptime` | Seconds since start |
-| `memory` | Heap memory usage |
-| `gpio` | GPIO status (simulated) |
-| `reboot` | Reboot device (simulated) |
+|`help`|Listavailablecommands|
+|`info`|Deviceinformation|
+|`uptime`|Secondssincestart|
+|`memory`|Heapmemoryusage|
+|`gpio`|GPIOstatus(simulated)|
+|`reboot`|Rebootdevice(simulated)|
 
-## Configuration
+##Configuration
 
 ```bash
-# Custom device name
-node daemon/mcu/udbd-mcu.js --name my-device
+#Customdevicename
+nodedaemon/mcu/udbd-mcu.js--namemy-device
 
-# Custom port
-node daemon/mcu/udbd-mcu.js --tcp 9920
+#Customport
+nodedaemon/mcu/udbd-mcu.js--tcp9920
 
-# Manual pairing mode
-node daemon/mcu/udbd-mcu.js --pairing manual
+#Manualpairingmode
+nodedaemon/mcu/udbd-mcu.js--pairingmanual
 
-# Custom command handler
-node daemon/mcu/udbd-mcu.js --exec ./my-handler.js
+#Customcommandhandler
+nodedaemon/mcu/udbd-mcu.js--exec./my-handler.js
 ```
 
-## Custom Command Handler
+##CustomCommandHandler
 
-Create a JavaScript module with an `exec` function:
+CreateaJavaScriptmodulewithan`exec`function:
 
 ```javascript
-// my-handler.js
-export function exec(cmd) {
-  if (cmd === "led on") {
-    // Your custom logic here
-    return { stdout: "LED turned on\n", stderr: "", code: 0 };
-  }
-  return null; // Fall through to built-in commands
+//my-handler.js
+exportfunctionexec(cmd){
+if(cmd==="ledon"){
+//Yourcustomlogichere
+return{stdout:"LEDturnedon\n",stderr:"",code:0};
+}
+returnnull;//Fallthroughtobuilt-incommands
 }
 ```
 
-## Design Goals
+##DesignGoals
 
-1. **Minimal footprint** - Single connection, limited buffers
-2. **No external dependencies** - Pure Node.js (or native C)
-3. **Subset protocol** - Core operations only
-4. **Embedded-friendly** - Easy to port to C/C++
+1.**Minimalfootprint**-Singleconnection,limitedbuffers
+2.**Noexternaldependencies**-PureNode.js(ornativeC)
+3.**Subsetprotocol**-Coreoperationsonly
+4.**Embedded-friendly**-EasytoporttoC/C++
 
-## Protocol Subset
+##ProtocolSubset
 
-The MCU daemon implements a minimal subset of the UDB protocol:
+TheMCUdaemonimplementsaminimalsubsetoftheUDBprotocol:
 
-| Message | Supported |
+|Message|Supported|
 |---------|-----------|
-| HELLO | ✅ |
-| AUTH_CHALLENGE/RESPONSE | ✅ |
-| PAIR_REQUEST | ✅ |
-| UNPAIR_REQUEST | ✅ |
-| STATUS | ✅ |
-| EXEC | ✅ |
-| PUSH/PULL | 🔲 Planned |
-| OPEN_SERVICE | ❌ Not supported |
+|HELLO|Yes|
+|AUTH_CHALLENGE/RESPONSE|Yes|
+|PAIR_REQUEST|Yes|
+|UNPAIR_REQUEST|Yes|
+|STATUS|Yes|
+|EXEC|Yes|
+|PUSH/PULL|No|
+|OPEN_SERVICE|No|
 
-## Native C Implementation (Future)
+##NativeCImplementation(Future)
 
-Directory structure for native ports:
+Directorystructurefornativeports:
 
 ```
 daemon/mcu/
-├── udbd-mcu.js       # Node.js reference
-├── native/
-│   ├── src/
-│   │   ├── protocol.c     # Message parsing
-│   │   ├── auth.c         # Crypto (Ed25519)
-│   │   ├── handlers.c     # Message handlers
-│   │   └── main.c         # Entry point
-│   ├── hal/
-│   │   ├── esp32/         # ESP-IDF HAL
-│   │   ├── stm32/         # STM32 HAL
-│   │   └── rp2040/        # Pico SDK HAL
-│   └── CMakeLists.txt
-└── README.md
+├──udbd-mcu.js#Node.jsreference
+├──native/
+│├──src/
+││├──protocol.c#Messageparsing
+││├──auth.c#Crypto(Ed25519)
+││├──handlers.c#Messagehandlers
+││└──main.c#Entrypoint
+│├──hal/
+││├──esp32/#ESP-IDFHAL
+││├──stm32/#STM32HAL
+││└──rp2040/#PicoSDKHAL
+│└──CMakeLists.txt
+└──README.md
 ```
 
-## Contributing
+##Contributing
 
-Native ports welcome! The Node.js implementation serves as a specification.
+Nativeportswelcome!TheNode.jsimplementationservesasaspecification.
 
-## Contributing
+##Contributing
 
-MCU support is a significant undertaking. If interested:
+MCUsupportisasignificantundertaking.Ifinterested:
 
-1. Start with ESP32 (most resources, WiFi built-in)
-2. Implement minimal protocol subset
-3. Test with existing client/CLI
-4. Expand to other platforms
+1.StartwithESP32(mostresources,WiFibuilt-in)
+2.Implementminimalprotocolsubset
+3.Testwithexistingclient/CLI
+4.Expandtootherplatforms

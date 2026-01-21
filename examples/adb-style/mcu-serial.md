@@ -1,42 +1,42 @@
-# MCU over Serial (ESP32, Arduino, STM32)
+#MCUoverSerial(ESP32,Arduino,STM32)
 
-## Setup
+##Setup
 
-1. Flash UDB firmware to MCU (see `daemon/mcu/`)
-2. Connect via USB
+1.FlashUDBfirmwaretoMCU(see`daemon/mcu/`)
+2.ConnectviaUSB
 
-## Usage
+##Usage
 
 ```bash
-# List devices (includes serial)
-udb devices
+#Listdevices(includesserial)
+udbdevices
 
-# Connect to serial device
-udb connect serial:///dev/ttyUSB0
+#Connecttoserialdevice
+udbconnectserial:///dev/ttyUSB0
 
-# Or on Windows
-udb connect serial://COM3
+#OronWindows
+udbconnectserial://COM3
 
-# Run command
-udb exec "reboot"
+#Runcommand
+udbexec"reboot"
 
-# Push firmware
-udb push ./firmware.bin /flash/app.bin
+#Pushfirmware
+udbpush./firmware.bin/flash/app.bin
 ```
 
-## Output
+##Output
 
 ```
-$ udb devices
-NAME             TYPE              TARGET                   STATUS
-esp32-01         mcu               serial:///dev/ttyUSB0    online
+$udbdevices
+NAMETYPETARGETSTATUS
+esp32-01mcuserial:///dev/ttyUSB0online
 
-$ udb exec "version"
-UDB-MCU v1.0.0 (ESP32)
+$udbexec"version"
+UDB-MCUv1.0.0(ESP32)
 ```
 
-## Notes
+##Notes
 
-- Default baud rate: 115200
-- Custom baud: `serial:///dev/ttyUSB0?baud=921600`
-- MCU commands depend on firmware implementation
+-Defaultbaudrate:115200
+-Custombaud:`serial:///dev/ttyUSB0?baud=921600`
+-MCUcommandsdependonfirmwareimplementation

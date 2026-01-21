@@ -1,136 +1,136 @@
-# @udb/client
+#@udb/client
 
-Programmatic API for Universal Device Bridge. Use this module to automate UDB operations in Node.js scripts, CI systems, or applications without using the CLI.
+ProgrammaticAPIforUniversalDeviceBridge.UsethismoduletoautomateUDBoperationsinNode.jsscripts,CIsystems,orapplicationswithoutusingtheCLI.
 
-## Installation
+##Installation
 
 ```bash
-npm install @udb/client
+npminstall@udb/client
 ```
 
-## Quick Start
+##QuickStart
 
 ```javascript
-import { discoverDevices, exec, status, createSession } from "@udb/client";
+import{discoverDevices,exec,status,createSession}from"@udb/client";
 
-// Discover devices on the network
-const devices = await discoverDevices();
-console.log(devices); // [{ host: "192.168.1.100", port: 9910, name: "device1" }]
+//Discoverdevicesonthenetwork
+constdevices=awaitdiscoverDevices();
+console.log(devices);//[{host:"10.0.0.1",port:9910,name:"device1"}]
 
-// Execute a command (one-shot, auto-connects)
-const result = await exec("10.0.0.1:9910", "whoami");
-console.log(result.stdout); // "user\n"
+//Executeacommand(one-shot,auto-connects)
+constresult=awaitexec("10.0.0.1:9910","whoami");
+console.log(result.stdout);//"user\n"
 
-// Or use a session for multiple operations
-const session = await createSession("10.0.0.1:9910");
-const r1 = await session.exec("hostname");
-const r2 = await session.exec("uptime");
-await session.close();
+//Oruseasessionformultipleoperations
+constsession=awaitcreateSession("10.0.0.1:9910");
+constr1=awaitsession.exec("hostname");
+constr2=awaitsession.exec("uptime");
+awaitsession.close();
 ```
 
-## API Reference
+##APIReference
 
-### Discovery & Target Resolution
+###Discovery&TargetResolution
 
-- `discoverDevices(timeoutMs)` - Discover devices via UDP broadcast
-- `parseTarget(arg)` - Parse "ip:port" or "tcp://host:port" string
-- `resolveTarget(maybeTarget)` - Resolve target from arg, context, or discovery
-- `probeTcp(target, timeoutMs)` - Test TCP connectivity
+-`discoverDevices(timeoutMs)`-DiscoverdevicesviaUDPbroadcast
+-`parseTarget(arg)`-Parse"ip:port"or"tcp://host:port"string
+-`resolveTarget(maybeTarget)`-Resolvetargetfromarg,context,ordiscovery
+-`probeTcp(target,timeoutMs)`-TestTCPconnectivity
 
-### Core Operations (One-Shot)
+###CoreOperations(One-Shot)
 
-- `pair(target)` - Pair with a device
-- `unpair(target, options)` - Unpair from a device
-- `exec(target, command)` - Execute a command on device
-- `status(target)` - Get device status
-- `push(target, localPath, remotePath)` - Push file to device
-- `pull(target, remotePath, localPath)` - Pull file from device
-- `listPaired(target)` - List paired clients on device
+-`pair(target)`-Pairwithadevice
+-`unpair(target,options)`-Unpairfromadevice
+-`exec(target,command)`-Executeacommandondevice
+-`status(target)`-Getdevicestatus
+-`push(target,localPath,remotePath)`-Pushfiletodevice
+-`pull(target,remotePath,localPath)`-Pullfilefromdevice
+-`listPaired(target)`-Listpairedclientsondevice
 
-### Sessions (Persistent Connection)
+###Sessions(PersistentConnection)
 
-- `createSession(target)` - Create a persistent session
-- `createStreamingSession(target)` - Alias for createSession (streaming support)
-- `UdbSession.exec(command)` - Execute command in session
-- `UdbSession.status()` - Get status in session
-- `UdbSession.openService(name, options)` - Open streaming service (e.g., shell)
-- `UdbSession.close()` - Close session
+-`createSession(target)`-Createapersistentsession
+-`createStreamingSession(target)`-AliasforcreateSession(streamingsupport)
+-`UdbSession.exec(command)`-Executecommandinsession
+-`UdbSession.status()`-Getstatusinsession
+-`UdbSession.openService(name,options)`-Openstreamingservice(e.g.,shell)
+-`UdbSession.close()`-Closesession
 
-### Context Management
+###ContextManagement
 
-- `getContexts()` - Get all saved contexts
-- `getCurrentContextName()` - Get current context name
-- `setCurrentContext(name)` - Switch to a context
-- `addContext(name, target)` - Save a new context
-- `getContext(name)` - Get context by name
-- `removeContext(name)` - Remove a context
+-`getContexts()`-Getallsavedcontexts
+-`getCurrentContextName()`-Getcurrentcontextname
+-`setCurrentContext(name)`-Switchtoacontext
+-`addContext(name,target)`-Saveanewcontext
+-`getContext(name)`-Getcontextbyname
+-`removeContext(name)`-Removeacontext
 
-### Batch Operations
+###BatchOperations
 
-- `execBatch(targets, command, options)` - Run command on multiple devices
+-`execBatch(targets,command,options)`-Runcommandonmultipledevices
 
-## Fleet Management
+##FleetManagement
 
-Import fleet functions separately:
+Importfleetfunctionsseparately:
 
 ```javascript
-import { createGroup, execOnGroup, findByLabels } from "@udb/client/fleet";
+import{createGroup,execOnGroup,findByLabels}from"@udb/client/fleet";
 
-// Create a device group
-createGroup("lab", [
-  { host: "192.168.1.100", port: 9910 },
-  { host: "192.168.1.101", port: 9910 }
+//Createadevicegroup
+createGroup("lab",[
+{host:"10.0.0.1",port:9910},
+{host:"10.0.0.2",port:9910}
 ]);
 
-// Execute on entire group
-const results = await execOnGroup("lab", "hostname");
+//Executeonentiregroup
+constresults=awaitexecOnGroup("lab","hostname");
 
-// Label devices and query by label
-setLabels({ host: "192.168.1.100", port: 9910 }, { env: "prod", role: "web" });
-const prodDevices = findByLabels({ env: "prod" });
+//Labeldevicesandquerybylabel
+setLabels({host:"10.0.0.1",port:9910},{env:"prod",role:"web"});
+constprodDevices=findByLabels({env:"prod"});
 ```
 
-## Examples
+##Examples
 
-See `examples/` folder for real-world usage patterns.
+See`examples/`folderforreal-worldusagepatterns.
 
-## Error Handling
+##ErrorHandling
 
-All API functions throw descriptive errors:
+AllAPIfunctionsthrowdescriptiveerrors:
 
 ```javascript
-import { exec, AuthError, ConnectionError, CommandError } from "@udb/client";
+import{exec,AuthError,ConnectionError,CommandError}from"@udb/client";
 
-try {
-  await exec("10.0.0.1:9910", "false");
-} catch (err) {
-  if (err instanceof AuthError) {
-    console.error("Not paired - run: udb pair <target>");
-  } else if (err instanceof ConnectionError) {
-    console.error("Cannot reach device:", err.message);
-  } else if (err instanceof CommandError) {
-    console.error("Command failed with exit code:", err.code);
-  }
+try{
+awaitexec("10.0.0.1:9910","false");
+}catch(err){
+if(errinstanceofAuthError){
+console.error("Notpaired-run:udbpair<target>");
+}elseif(errinstanceofConnectionError){
+console.error("Cannotreachdevice:",err.message);
+}elseif(errinstanceofCommandError){
+console.error("Commandfailedwithexitcode:",err.code);
+}
 }
 ```
 
-## Configuration
+##Configuration
 
-Store persistent config in `~/.udb/config.json`:
+Storepersistentconfigin`~/.udb/config.json`:
 
 ```json
 {
-  "lastTarget": { "host": "192.168.1.100", "port": 9910 },
-  "contexts": {
-    "lab": { "host": "192.168.1.100", "port": 9910, "name": "lab-device" }
-  }
+"lastTarget":{"host":"10.0.0.1","port":9910},
+"contexts":{
+"lab":{"host":"10.0.0.1","port":9910,"name":"lab-device"}
+}
 }
 ```
 
-## 100% Offline
+##100%Offline
 
-All @udb/client operations work without internet or cloud services. No telemetry, no cloud requirements.
+All@udb/clientoperationsworkwithoutinternetorcloudservices.Notelemetry,nocloudrequirements.
 
 ---
 
-For full API documentation, see [API.md](./API.md).
+ForfullAPIdocumentation,see[API.md](./API.md).

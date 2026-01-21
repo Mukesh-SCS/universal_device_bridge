@@ -1,55 +1,55 @@
-# CI Simulator
+#CISimulator
 
-UDB includes a simulator for automated testing without hardware.
+UDBincludesasimulatorforautomatedtestingwithouthardware.
 
-## Start Simulator
+##StartSimulator
 
 ```bash
-node daemon/simulator/udbd-sim.js --port 9910 --name "ci-sim"
+nodedaemon/simulator/udbd-sim.js--port9910--name"ci-sim"
 ```
 
-## CI Usage
+##CIUsage
 
 ```bash
-# Connect to simulator
-udb connect 127.0.0.1:9910
+#Connecttosimulator
+udbconnect127.0.0.1:9910
 
-# Run tests
-udb exec "npm test"
+#Runtests
+udbexec"npmtest"
 EXIT_CODE=$?
 
-# Deploy if tests pass
-if [ $EXIT_CODE -eq 0 ]; then
-  udb push ./dist /app
-  udb exec "systemctl restart app"
+#Deployiftestspass
+if[$EXIT_CODE-eq0];then
+udbpush./dist/app
+udbexec"systemctlrestartapp"
 fi
 ```
 
-## GitHub Actions
+##GitHubActions
 
 ```yaml
-- name: Start UDB Simulator
-  run: node daemon/simulator/udbd-sim.js &
+-name:StartUDBSimulator
+run:nodedaemon/simulator/udbd-sim.js&
 
-- name: Run tests via UDB
-  run: |
-    udb connect 127.0.0.1:9910
-    udb exec "npm test"
+-name:RuntestsviaUDB
+run:|
+udbconnect127.0.0.1:9910
+udbexec"npmtest"
 ```
 
-## Output
+##Output
 
 ```
-$ udb devices
-NAME             TYPE              TARGET                   STATUS
-ci-sim           simulator         127.0.0.1:9910           online
+$udbdevices
+NAMETYPETARGETSTATUS
+ci-simsimulator127.0.0.1:9910online
 
-$ udb exec "echo Hello"
+$udbexec"echoHello"
 Hello
 ```
 
-## Key Points
+##KeyPoints
 
-- Simulator requires no hardware
-- Same commands work on real devices
-- Perfect for CI/CD pipelines
+-Simulatorrequiresnohardware
+-Samecommandsworkonrealdevices
+-PerfectforCI/CDpipelines

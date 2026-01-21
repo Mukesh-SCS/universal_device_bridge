@@ -1,356 +1,342 @@
 
-# Universal Device Bridge (UDB)
+#UniversalDeviceBridge(UDB)
 
-Universal Device Bridge (UDB) is a **local-first, offline-capable device access tool** inspired by the architecture of Android Debug Bridge (ADB), but designed to work across **non-Android devices** such as:
+UniversalDeviceBridge(UDB)isa**local-first,offline-capabledeviceaccesstool**inspiredbythearchitectureofAndroidDebugBridge(ADB),butdesignedtoworkacross**non-Androiddevices**suchas:
 
-- **Linux systems** (servers, embedded Linux)
-- **Embedded platforms** (IoT devices, SBCs)
-- **MCUs** (microcontrollers via serial/TCP)
-- **Simulators** (virtual device testing)
-- **Automotive ECUs** (vehicle embedded systems)
+-**Linuxsystems**(servers,embeddedLinux)
+-**Embeddedplatforms**(IoTdevices,SBCs)
+-**MCUs**(microcontrollersviaserial/TCP)
+-**Simulators**(virtualdevicetesting)
+-**AutomotiveECUs**(vehicleembeddedsystems)
 
-UDB provides a lightweight, secure, and scriptable system for discovering devices, pairing with them, and executing commands locally or remotely.
+UDBprovidesalightweight,secure,andscriptablesystemfordiscoveringdevices,pairingwiththem,andexecutingcommandslocallyorremotely.
 
-It works reliably across:
-- Local networks (with or without UDP broadcast)
-- Windows, Linux, and macOS environments
-- Restricted/air-gapped networks
-- Cloud and CI/CD systems
+Itworksreliablyacross:
+-Localnetworks(withorwithoutUDPbroadcast)
+-Windows,Linux,andmacOSenvironments
+-Restricted/air-gappednetworks
+-CloudandCI/CDsystems
 
-It provides a deterministic CLI experience similar in philosophy to tools like `kubectl` and `adb`, but without relying on fragile assumptions.
-
----
-
-## Key Features
-
-- **Device discovery** (UDP fast path with fallback)
-- **Context-based device management** (save & reuse known devices)
-- **Explicit remote targets** (`tcp://host:port`)
-- **Secure pairing and authorization** (cryptographic keypairs)
-- **Command execution** (with stdout/stderr)
-- **Programmatic API** (`@udb/client` - execute UDB from Node.js)
-- **Batch operations** (run commands across multiple devices)
-- **Fleet management** (logical grouping and labeling)
-- **JSON output for automation**
-- **100% offline** (no cloud, no telemetry)
+ItprovidesadeterministicCLIexperiencesimilarinphilosophytotoolslike`kubectl`and`adb`,butwithoutrelyingonfragileassumptions.
 
 ---
 
-## Architecture Overview
+##KeyFeatures
 
-UDB consists of:
-
-- **Daemon (`udbd`)** - Runs on target device, exposes TCP control interface
-- **CLI (`udb`)** - Command-line tool for operators and scripts
-- **Client API (`@udb/client`)** - Programmatic API for automation
-
-Communication is authenticated using cryptographic keypairs and explicit pairing.
-
----
-
-## Quick Start 
-
-### 1. Start the daemon
-
-```bash
-# On target device (or use udb daemon start)
-udb daemon start
-```
-
-### 2. Discover devices
-
-```bash
-udb devices
-udb devices --json
-```
-
-### 3. Pair and execute
-
-```bash
-udb pair 10.0.0.1:9910
-udb exec "whoami"
-```
+-**Devicediscovery**(UDPfastpathwithfallback)
+-**Context-baseddevicemanagement**(save&reuseknowndevices)
+-**Explicitremotetargets**(`tcp://host:port`)
+-**Securepairingandauthorization**(cryptographickeypairs)
+-**Commandexecution**(withstdout/stderr)
+-**ProgrammaticAPI**(`@udb/client`-executeUDBfromNode.js)
+-**Batchoperations**(runcommandsacrossmultipledevices)
+-**Fleetmanagement**(logicalgroupingandlabeling)
+-**JSONoutputforautomation**
+-**100%offline**(nocloud,notelemetry)
 
 ---
 
-## CLI Usage
+##ArchitectureOverview
 
-### Device Operations
+UDBconsistsof:
+
+-**Daemon(`udbd`)**-Runsontargetdevice,exposesTCPcontrolinterface
+-**CLI(`udb`)**-Command-linetoolforoperatorsandscripts
+-**ClientAPI(`@udb/client`)**-ProgrammaticAPIforautomation
+
+Communicationisauthenticatedusingcryptographickeypairsandexplicitpairing.
+
+---
+
+##QuickStart
+
+###1.Startthedaemon
 
 ```bash
-# Discover devices on network
-udb devices [--json]
-
-# Get device status
-udb status [ip:port] [--json]
-
-# Pair with device
-udb pair <ip:port>
-
-# Unpair from device
-udb unpair <ip:port> [--all | --fp <fingerprint>]
-
-# Execute command
-udb exec [ip:port] "<cmd>"
-
-# Push file to device
-udb push [ip:port] <local-path> <remote-path>
-
-# Pull file from device
-udb pull [ip:port] <remote-path> <local-path>
-
-# List paired clients
-udb list-paired <ip:port> [--json]
+#Ontargetdevice(oruseudbdaemonstart)
+udbdaemonstart
 ```
 
-### Context Management
+###2.Discoverdevices
 
 ```bash
-# Save a device as a context
-udb context add lab 10.0.0.1:9910
-
-# Select active context
-udb context use lab
-
-# List contexts
-udb context list [--json]
-
-# Once context is active, all commands target it
-udb exec "whoami"
+udbdevices
+udbdevices--json
 ```
 
-### Fleet Management (Phase 3)
+###3.Pairandexecute
 
 ```bash
-# Create a device group
-udb group add lab 10.0.0.1:9910 10.0.0.2:9910
-
-# Execute on entire group
-udb group exec lab "uname -a"
-
-# List groups
-udb group list [--json]
-
-# Export fleet inventory
-udb inventory [--json]
-```
-
-### Configuration
-
-```bash
-# View configuration
-udb config show [--json]
-
-# Daemon management
-udb daemon start
-udb daemon stop
-udb daemon status
+udbpair10.0.0.1:9910
+udbexec"whoami"
 ```
 
 ---
 
-## Programmatic API
+##CLIUsage
 
-Execute UDB operations from Node.js scripts or applications:
+###DeviceOperations
+
+```bash
+#Discoverdevicesonnetwork
+udbdevices[--json]
+
+#Getdevicestatus
+udbstatus[ip:port][--json]
+
+#Pairwithdevice
+udbpair<ip:port>
+
+#Unpairfromdevice
+udbunpair<ip:port>[--all|--fp<fingerprint>]
+
+#Executecommand
+udbexec[ip:port]"<cmd>"
+
+#Pushfiletodevice
+udbpush[ip:port]<local-path><remote-path>
+
+#Pullfilefromdevice
+udbpull[ip:port]<remote-path><local-path>
+
+#Listpairedclients
+udblist-paired<ip:port>[--json]
+```
+
+###ContextManagement
+
+```bash
+#Saveadeviceasacontext
+udbcontextaddlab10.0.0.1:9910
+
+#Selectactivecontext
+udbcontextuselab
+
+#Listcontexts
+udbcontextlist[--json]
+
+#Oncecontextisactive,allcommandstargetit
+udbexec"whoami"
+```
+
+###FleetManagement(Phase3)
+
+```bash
+#Createadevicegroup
+udbgroupaddlab10.0.0.1:991010.0.0.2:9910
+
+#Executeonentiregroup
+udbgroupexeclab"uname-a"
+
+#Listgroups
+udbgrouplist[--json]
+
+#Exportfleetinventory
+udbinventory[--json]
+```
+
+###Configuration
+
+```bash
+#Viewconfiguration
+udbconfigshow[--json]
+
+#Daemonmanagement
+udbdaemonstart
+udbdaemonstop
+udbdaemonstatus
+```
+
+---
+
+##ProgrammaticAPI
+
+ExecuteUDBoperationsfromNode.jsscriptsorapplications:
 
 ```javascript
-import { exec, status, pair, discoverDevices } from "@udb/client";
+import{exec,status,pair,discoverDevices}from"@udb/client";
 
-// Discover devices
-const devices = await discoverDevices();
+//Discoverdevices
+constdevices=awaitdiscoverDevices();
 
-// Execute command
-const result = await exec("10.0.0.1:9910", "whoami");
-console.log(result.stdout); // "user\n"
+//Executecommand
+constresult=awaitexec("10.0.0.1:9910","whoami");
+console.log(result.stdout);//"user\n"
 
-// Get device status
-const info = await status("10.0.0.1:9910");
-console.log(info.name); // "device-name"
+//Getdevicestatus
+constinfo=awaitstatus("10.0.0.1:9910");
+console.log(info.name);//"device-name"
 
-// Pair with device
-const pair_result = await pair("10.0.0.1:9910");
+//Pairwithdevice
+constpair_result=awaitpair("10.0.0.1:9910");
 console.log(pair_result.fingerprint);
 ```
 
-### Advanced Features
+###AdvancedFeatures
 
-**Persistent Sessions:**
+**PersistentSessions:**
 ```javascript
-const session = await createSession("10.0.0.1:9910");
-await session.exec("cmd1");
-await session.exec("cmd2");
-await session.close();
+constsession=awaitcreateSession("10.0.0.1:9910");
+awaitsession.exec("cmd1");
+awaitsession.exec("cmd2");
+awaitsession.close();
 ```
 
-**Batch Execution:**
+**BatchExecution:**
 ```javascript
-const results = await execBatch(devices, "whoami", { parallel: true });
+constresults=awaitexecBatch(devices,"whoami",{parallel:true});
 ```
 
-**Fleet Operations:**
+**FleetOperations:**
 ```javascript
-import { createGroup, execOnGroup } from "@udb/client/fleet";
+import{createGroup,execOnGroup}from"@udb/client/fleet";
 
-createGroup("lab", devices);
-const results = await execOnGroup("lab", "uname -a");
+createGroup("lab",devices);
+constresults=awaitexecOnGroup("lab","uname-a");
 ```
 
 ---
 
-## Discovery Strategy
+##DiscoveryStrategy
 
-UDB uses layered device discovery:
+UDBuseslayereddevicediscovery:
 
-1. **UDP broadcast** (fast, local network)
-2. **Saved contexts** (reliable fallback)
-3. **Explicit targets** (always available)
+1.**UDPbroadcast**(fast,localnetwork)
+2.**Savedcontexts**(reliablefallback)
+3.**Explicittargets**(alwaysavailable)
 
-This ensures UDB works everywhere:
-- Local networks with broadcast
-- Restricted networks without UDP
-- Cloud environments
-- CI/CD systems
+ThisensuresUDBworkseverywhere:
+-Localnetworkswithbroadcast
+-RestrictednetworkswithoutUDP
+-Cloudenvironments
+-CI/CDsystems
 
 ---
 
-## Contexts
+##Contexts
 
-Contexts save device addresses locally for easy access:
+Contextssavedeviceaddresseslocallyforeasyaccess:
 
 ```bash
-# Add context
-udb context add production 10.0.0.100:9910
-udb context add staging 10.0.1.100:9910
+#Addcontext
+udbcontextaddproduction10.0.0.100:9910
+udbcontextaddstaging10.0.1.100:9910
 
-# Use context
-udb context use production
+#Usecontext
+udbcontextuseproduction
 
-# Commands now target this device
-udb exec "hostname"
-udb status
+#Commandsnowtargetthisdevice
+udbexec"hostname"
+udbstatus
 ```
 
-Contexts are stored in `~/.udb/config.json` and work offline.
+Contextsarestoredin`~/.udb/config.json`andworkoffline.
 
 ---
 
-## Security Model
+##SecurityModel
 
-- **Explicit pairing** - Devices must approve first connection
-- **Cryptographic keypairs** - Each client has unique keypair
-- **Fingerprint verification** - Optional pairing confirmation
-- **Revocable access** - Unpair to revoke client access
-- **No global trust** - No central authority needed
-
----
-
-## Project Status
-
-| Phase | Status | Features |
-|-------|--------|----------|
-| 1 | ✅ Complete | Core CLI, daemon, protocol, security |
-| 2 | ✅ Complete | Contexts, discovery fallback, remote targets |
-| 3 | ✅ Complete | Programmatic API, batch ops, fleet management |
-
-**Current version:** v0.3.0 (Phase 3)
+-**Explicitpairing**-Devicesmustapprovefirstconnection
+-**Cryptographickeypairs**-Eachclienthasuniquekeypair
+-**Fingerprintverification**-Optionalpairingconfirmation
+-**Revocableaccess**-Unpairtorevokeclientaccess
+-**Noglobaltrust**-Nocentralauthorityneeded
 
 ---
 
-## Examples
+##Examples
 
-### Example 1: Basic execution
-
-```bash
-udb pair 10.0.0.1:9910
-udb exec "uptime"
-```
-
-### Example 2: Using contexts
+###Example1:Basicexecution
 
 ```bash
-udb context add lab 10.0.0.1:9910
-udb context use lab
-udb exec "df -h"
-udb status --json
+udbpair10.0.0.1:9910
+udbexec"uptime"
 ```
 
-### Example 3: Fleet operation
+###Example2:Usingcontexts
 
 ```bash
-udb group add lab 10.0.0.1:9910 10.0.0.2:9910 10.0.0.3:9910
-udb group exec lab "systemctl status nginx"
-udb inventory --json > fleet.json
+udbcontextaddlab10.0.0.1:9910
+udbcontextuselab
+udbexec"df-h"
+udbstatus--json
 ```
 
-### Example 4: Programmatic usage
+###Example3:Fleetoperation
+
+```bash
+udbgroupaddlab10.0.0.1:991010.0.0.2:991010.0.0.3:9910
+udbgroupexeclab"systemctlstatusnginx"
+udbinventory--json>fleet.json
+```
+
+###Example4:Programmaticusage
 
 ```javascript
-// See scripts/ folder for full examples
-node scripts/devices.js
-node scripts/exec.js
-node scripts/context.js 10.0.0.1:9910
-node scripts/pair.js
-node scripts/group.js 10.0.0.1:9910
+//Seescripts/folderforfullexamples
+nodescripts/devices.js
+nodescripts/exec.js
+nodescripts/context.js10.0.0.1:9910
+nodescripts/pair.js
+nodescripts/group.js10.0.0.1:9910
 ```
 
 ---
 
-## Configuration
+##Configuration
 
-UDB stores configuration in `~/.udb/config.json`:
+UDBstoresconfigurationin`~/.udb/config.json`:
 
 ```json
 {
-  "lastTarget": { "host": "192.168.1.100", "port": 9910 },
-  "currentContext": "lab",
-  "contexts": {
-    "lab": { "host": "192.168.1.100", "port": 9910, "name": "lab-device" }
-  }
+"lastTarget":{"host":"10.0.0.1","port":9910},
+"currentContext":"lab",
+"contexts":{
+"lab":{"host":"10.0.0.1","port":9910,"name":"lab-device"}
+}
 }
 ```
 
-View configuration:
+Viewconfiguration:
 ```bash
-udb config show
-udb config show --json
+udbconfigshow
+udbconfigshow--json
 ```
 
 ---
 
-## Documentation
+##Documentation
 
-- [Testing Guide](test-setup.md) - Complete testing procedure
-- [API Reference](client/API.md) - Programmatic API details
-- [Architecture](docs/architecture.md)
-- [Roadmap](docs/roadmap.md)
+-[Documentation](docs/DOCUMENTATION.md)-CompleteUDBdocumentation
+-[APIReference](client/API.md)-ProgrammaticAPIdetails
 
 ---
 
-## Design Philosophy
+##DesignPhilosophy
 
-UDB follows these principles:
+UDBfollowstheseprinciples:
 
-1. **Local-first** - All operations work offline
-2. **Explicit** - No magic, clear target specification
-3. **Secure** - Cryptographic by default
-4. **Scriptable** - Both CLI and programmatic APIs
-5. **Reliable** - Deterministic behavior across platforms
-6. **Simple** - No complex orchestration
-7. **Composable** - Works in pipelines and automation
-
----
-
-## 100% Offline
-
-UDB requires **no cloud connection**:
-- Discovery works on local networks
-- Pairing is local-only
-- No telemetry
-- No external dependencies
-- Works in air-gapped environments
+1.**Local-first**-Alloperationsworkoffline
+2.**Explicit**-Nomagic,cleartargetspecification
+3.**Secure**-Cryptographicbydefault
+4.**Scriptable**-BothCLIandprogrammaticAPIs
+5.**Reliable**-Deterministicbehavioracrossplatforms
+6.**Simple**-Nocomplexorchestration
+7.**Composable**-Worksinpipelinesandautomation
 
 ---
 
-## License
+##100%Offline
 
-This project is licensed under the Apache-2.0 License. See the LICENSE file for details.
+UDBrequires**nocloudconnection**:
+-Discoveryworksonlocalnetworks
+-Pairingislocal-only
+-Notelemetry
+-Noexternaldependencies
+-Worksinair-gappedenvironments
+
+---
+
+##License
+
+ThisprojectislicensedundertheApache-2.0License.SeetheLICENSEfilefordetails.

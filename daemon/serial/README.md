@@ -1,39 +1,39 @@
-# Serial Transport
+#SerialTransport
 
-Serial port transport for UDB - enables communication with embedded devices and MCUs over serial/UART.
+SerialporttransportforUDB-enablescommunicationwithembeddeddevicesandMCUsoverserial/UART.
 
-## Overview
+##Overview
 
-The serial transport uses the exact same protocol as TCP, proving that UDB's transport abstraction works correctly. No protocol changes were required.
+TheserialtransportusestheexactsameprotocolasTCP,provingthatUDB'stransportabstractionworkscorrectly.Noprotocolchangeswererequired.
 
-## Installation
+##Installation
 
-The serial transport requires the `serialport` npm package:
+Theserialtransportrequiresthe`serialport`npmpackage:
 
 ```bash
-npm install serialport
+npminstallserialport
 ```
 
-## Usage
+##Usage
 
-### Client Side
+###ClientSide
 
 ```javascript
-import { createSerialTransport, tcpRequest } from "@udb/client";
+import{createSerialTransport,tcpRequest}from"@udb/client";
 
-// Create a serial transport
-const transport = createSerialTransport("COM3", {
-  baudRate: 115200,
-  timeout: 10000
+//Createaserialtransport
+consttransport=createSerialTransport("COM3",{
+baudRate:115200,
+timeout:10000
 });
 
-// Use with tcpRequest (name is misleading, works with any transport)
-const result = await tcpRequest(null, messages, { transport });
+//UsewithtcpRequest(nameismisleading,workswithanytransport)
+constresult=awaittcpRequest(null,messages,{transport});
 ```
 
-### URL Format
+###URLFormat
 
-Serial targets can be specified as URLs:
+SerialtargetscanbespecifiedasURLs:
 
 ```
 serial://COM3
@@ -41,103 +41,103 @@ serial:///dev/ttyUSB0
 serial://COM3?baud=9600
 ```
 
-### Daemon Side
+###DaemonSide
 
-Run the serial daemon on the device:
-
-```bash
-# Basic usage
-node serial-daemon.js --port /dev/ttyUSB0
-
-# With options
-node serial-daemon.js --port COM3 --baud 115200 --name my-device --verbose
-```
-
-## Virtual Serial Ports for Testing
-
-### Windows
-
-Use [com0com](https://sourceforge.net/projects/com0com/) to create virtual serial port pairs.
-
-```
-# Install com0com
-# Creates COM10 <-> COM11 pair by default
-```
-
-### Linux
-
-Use `socat` to create virtual serial port pairs:
+Runtheserialdaemononthedevice:
 
 ```bash
-# Create pair
-socat -d -d pty,raw,echo=0 pty,raw,echo=0
+#Basicusage
+nodeserial-daemon.js--port/dev/ttyUSB0
 
-# Output will show paths like:
-# /dev/pts/2 <-> /dev/pts/3
+#Withoptions
+nodeserial-daemon.js--portCOM3--baud115200--namemy-device--verbose
 ```
 
-### macOS
+##VirtualSerialPortsforTesting
 
-Use `socat` (install via Homebrew):
+###Windows
+
+Use[com0com](https://sourceforge.net/projects/com0com/)tocreatevirtualserialportpairs.
+
+```
+#Installcom0com
+#CreatesCOM10<->COM11pairbydefault
+```
+
+###Linux
+
+Use`socat`tocreatevirtualserialportpairs:
 
 ```bash
-brew install socat
-socat -d -d pty,raw,echo=0 pty,raw,echo=0
+#Createpair
+socat-d-dpty,raw,echo=0pty,raw,echo=0
+
+#Outputwillshowpathslike:
+#/dev/pts/2<->/dev/pts/3
 ```
 
-## Supported Operations
+###macOS
 
-All standard UDB operations work over serial:
+Use`socat`(installviaHomebrew):
 
-- ✅ `services` - Query device capabilities
-- ✅ `info` - Query device metadata
-- ✅ `ping` - Health check
-- ✅ `pair` - Pairing flow
-- ✅ `exec` - Command execution
-- ✅ `status` - Device status
+```bash
+brewinstallsocat
+socat-d-dpty,raw,echo=0pty,raw,echo=0
+```
 
-## Architecture Validation
+##SupportedOperations
 
-The serial transport validates UDB's design:
+AllstandardUDBoperationsworkoverserial:
 
-1. **No protocol changes** - Exact same message format as TCP
-2. **No framing changes** - Same length-prefixed JSON frames
-3. **No client changes** - `tcpRequest` works with any Transport
-4. **Transport independence** - Adding USB/BLE would follow the same pattern
+-`services`-Querydevicecapabilities
+-`info`-Querydevicemetadata
+-`ping`-Healthcheck
+-`pair`-Pairingflow
+-`exec`-Commandexecution
+-`status`-Devicestatus
 
-## Example: Embedded Device
+##ArchitectureValidation
+
+TheserialtransportvalidatesUDB'sdesign:
+
+1.**Noprotocolchanges**-ExactsamemessageformatasTCP
+2.**Noframingchanges**-Samelength-prefixedJSONframes
+3.**Noclientchanges**-`tcpRequest`workswithanyTransport
+4.**Transportindependence**-AddingUSB/BLEwouldfollowthesamepattern
+
+##Example:EmbeddedDevice
 
 ```javascript
-import { createSerialTransport, exec } from "@udb/client";
+import{createSerialTransport,exec}from"@udb/client";
 
-const transport = createSerialTransport("/dev/ttyUSB0");
+consttransport=createSerialTransport("/dev/ttyUSB0");
 
-// Execute command on embedded device
-const result = await exec("gpio read 17", { transport });
+//Executecommandonembeddeddevice
+constresult=awaitexec("gpioread17",{transport});
 console.log(result.stdout);
 ```
 
-## Troubleshooting
+##Troubleshooting
 
-### Port Access Denied (Linux)
+###PortAccessDenied(Linux)
 
-Add user to dialout group:
-
-```bash
-sudo usermod -a -G dialout $USER
-# Log out and back in
-```
-
-### Port Busy
-
-Check for other processes using the port:
+Addusertodialoutgroup:
 
 ```bash
-lsof /dev/ttyUSB0
+sudousermod-a-Gdialout$USER
+#Logoutandbackin
 ```
 
-### No Data Received
+###PortBusy
 
-1. Check baud rate matches between client and device
-2. Verify TX/RX wiring is correct (may need crossover)
-3. Check flow control settings
+Checkforotherprocessesusingtheport:
+
+```bash
+lsof/dev/ttyUSB0
+```
+
+###NoDataReceived
+
+1.Checkbaudratematchesbetweenclientanddevice
+2.VerifyTX/RXwiringiscorrect(mayneedcrossover)
+3.Checkflowcontrolsettings

@@ -1,431 +1,431 @@
-# @udb/client - Quick Reference Guide
+#@udb/client-QuickReferenceGuide
 
-Fast lookup for common operations. For full documentation, see [API.md](./API.md).
+Fastlookupforcommonoperations.Forfulldocumentation,see[API.md](./API.md).
 
 ---
 
-## Installation
+##Installation
 
 ```bash
-npm install @udb/client
+npminstall@udb/client
 ```
 
 ---
 
-## Import Examples
+##ImportExamples
 
 ```javascript
-// Core operations
-import { exec, status, pair, unpair } from "@udb/client";
+//Coreoperations
+import{exec,status,pair,unpair}from"@udb/client";
 
-// Discovery
-import { discoverDevices, resolveTarget } from "@udb/client";
+//Discovery
+import{discoverDevices,resolveTarget}from"@udb/client";
 
-// Sessions
-import { createSession } from "@udb/client";
+//Sessions
+import{createSession}from"@udb/client";
 
-// Batch
-import { execBatch } from "@udb/client";
+//Batch
+import{execBatch}from"@udb/client";
 
-// Context
-import { setCurrentContext, addContext } from "@udb/client";
+//Context
+import{setCurrentContext,addContext}from"@udb/client";
 
-// Fleet (separate module)
-import { createGroup, execOnGroup } from "@udb/client/fleet";
+//Fleet(separatemodule)
+import{createGroup,execOnGroup}from"@udb/client/fleet";
 
-// Errors
-import { UdbError, AuthError, CommandError } from "@udb/client";
+//Errors
+import{UdbError,AuthError,CommandError}from"@udb/client";
 ```
 
 ---
 
-## Most Common Patterns
+##MostCommonPatterns
 
-### Execute a Command
+###ExecuteaCommand
 ```javascript
-const result = await exec("10.0.0.1:9910", "whoami");
-console.log(result.stdout); // "user\n"
+constresult=awaitexec("10.0.0.1:9910","whoami");
+console.log(result.stdout);//"user\n"
 ```
 
-### Get Device Status
+###GetDeviceStatus
 ```javascript
-const info = await status("10.0.0.1:9910");
-console.log(info.name); // "device-name"
+constinfo=awaitstatus("10.0.0.1:9910");
+console.log(info.name);//"device-name"
 ```
 
-### Discover Devices
+###DiscoverDevices
 ```javascript
-const devices = await discoverDevices();
-devices.forEach(d => console.log(d.name));
+constdevices=awaitdiscoverDevices();
+devices.forEach(d=>console.log(d.name));
 ```
 
-### Create a Session (Multiple Commands)
+###CreateaSession(MultipleCommands)
 ```javascript
-const session = await createSession("10.0.0.1:9910");
-await session.exec("cd /tmp");
-await session.exec("ls");
-await session.close();
+constsession=awaitcreateSession("10.0.0.1:9910");
+awaitsession.exec("cd/tmp");
+awaitsession.exec("ls");
+awaitsession.close();
 ```
 
-### Batch Execute Across Multiple Devices
+###BatchExecuteAcrossMultipleDevices
 ```javascript
-const results = await execBatch(devices, "whoami");
-results.forEach(r => {
-  if (r.success) console.log(r.result.stdout);
-  else console.error(r.error.message);
+constresults=awaitexecBatch(devices,"whoami");
+results.forEach(r=>{
+if(r.success)console.log(r.result.stdout);
+elseconsole.error(r.error.message);
 });
 ```
 
-### Pair with Device
+###PairwithDevice
 ```javascript
-const result = await pair("10.0.0.1:9910");
-console.log(result.fingerprint); // "abc123..."
+constresult=awaitpair("10.0.0.1:9910");
+console.log(result.fingerprint);//"abc123..."
 ```
 
 ---
 
-## Context Quick Reference
+##ContextQuickReference
 
-### Add Context
+###AddContext
 ```javascript
-import { addContext, getContexts } from "@udb/client";
-addContext("lab", { host: "192.168.1.100", port: 9910 });
+import{addContext,getContexts}from"@udb/client";
+addContext("lab",{host:"10.0.0.1",port:9910});
 ```
 
-### Use Context (Resolve Without Args)
+###UseContext(ResolveWithoutArgs)
 ```javascript
-import { setCurrentContext, resolveTarget } from "@udb/client";
+import{setCurrentContext,resolveTarget}from"@udb/client";
 setCurrentContext("lab");
-const target = await resolveTarget(); // Uses "lab" context
-await exec(target, "whoami");
+consttarget=awaitresolveTarget();//Uses"lab"context
+awaitexec(target,"whoami");
 ```
 
-### List Contexts
+###ListContexts
 ```javascript
-import { getContexts } from "@udb/client";
-const all = getContexts();
+import{getContexts}from"@udb/client";
+constall=getContexts();
 ```
 
 ---
 
-## Fleet Management Quick Reference
+##FleetManagementQuickReference
 
 ```javascript
-import {
-  createGroup,
-  getGroup,
-  execOnGroup,
-  setLabels,
-  findByLabels,
-  exportInventory
-} from "@udb/client/fleet";
+import{
+createGroup,
+getGroup,
+execOnGroup,
+setLabels,
+findByLabels,
+exportInventory
+}from"@udb/client/fleet";
 
-// Create group
-createGroup("lab", [
-  { host: "192.168.1.100", port: 9910 },
-  { host: "192.168.1.101", port: 9910 }
+//Creategroup
+createGroup("lab",[
+{host:"10.0.0.1",port:9910},
+{host:"10.0.0.2",port:9910}
 ]);
 
-// Execute on group
-const results = await execOnGroup("lab", "uptime");
+//Executeongroup
+constresults=awaitexecOnGroup("lab","uptime");
 
-// Label devices
-setLabels({ host: "192.168.1.100", port: 9910 }, {
-  env: "prod",
-  role: "gateway"
+//Labeldevices
+setLabels({host:"10.0.0.1",port:9910},{
+env:"prod",
+role:"gateway"
 });
 
-// Find by label
-const devices = findByLabels({ env: "prod" });
+//Findbylabel
+constdevices=findByLabels({env:"prod"});
 
-// Export
-const inventory = exportInventory();
+//Export
+constinventory=exportInventory();
 ```
 
 ---
 
-## Error Handling
+##ErrorHandling
 
 ```javascript
-import {
-  exec,
-  AuthError,
-  ConnectionError,
-  CommandError,
-  UdbError
-} from "@udb/client";
+import{
+exec,
+AuthError,
+ConnectionError,
+CommandError,
+UdbError
+}from"@udb/client";
 
-try {
-  const result = await exec(target, "command");
-} catch (err) {
-  if (err instanceof AuthError) {
-    console.log("Device not paired");
-  } else if (err instanceof ConnectionError) {
-    console.log("Network error");
-  } else if (err instanceof CommandError) {
-    console.log(`Command failed with code ${err.code}`);
-  } else {
-    console.log(`Unknown error: ${err.message}`);
-  }
+try{
+constresult=awaitexec(target,"command");
+}catch(err){
+if(errinstanceofAuthError){
+console.log("Devicenotpaired");
+}elseif(errinstanceofConnectionError){
+console.log("Networkerror");
+}elseif(errinstanceofCommandError){
+console.log(`Commandfailedwithcode${err.code}`);
+}else{
+console.log(`Unknownerror:${err.message}`);
+}
 }
 ```
 
 ---
 
-## Target Formats
+##TargetFormats
 
-All functions accept targets in multiple formats:
+Allfunctionsaccepttargetsinmultipleformats:
 
 ```javascript
-// String format
-await exec("10.0.0.1:9910", "whoami");
-await exec("tcp://10.0.0.1:9910", "whoami");
+//Stringformat
+awaitexec("10.0.0.1:9910","whoami");
+awaitexec("tcp://10.0.0.1:9910","whoami");
 
-// Object format
-await exec({ host: "192.168.1.100", port: 9910 }, "whoami");
+//Objectformat
+awaitexec({host:"10.0.0.1",port:9910},"whoami");
 
-// String context name (after setting it)
-await exec("lab", "whoami");
+//Stringcontextname(aftersettingit)
+awaitexec("lab","whoami");
 ```
 
 ---
 
-## Return Type Examples
+##ReturnTypeExamples
 
-### ExecResult
+###ExecResult
 ```javascript
 {
-  stdout: "user\n",
-  stderr: "",
-  exitCode: 0
+stdout:"user\n",
+stderr:"",
+exitCode:0
 }
 ```
 
-### StatusResult
+###StatusResult
 ```javascript
 {
-  name: "device-name",
-  pairingMode: "auto",
-  execEnabled: true,
-  pairedCount: 3
+name:"device-name",
+pairingMode:"auto",
+execEnabled:true,
+pairedCount:3
 }
 ```
 
-### BatchResult
+###BatchResult
 ```javascript
 [
-  {
-    target: { host: "...", port: 9910 },
-    success: true,
-    result: { stdout: "...", ... }
-  },
-  {
-    target: { host: "...", port: 9910 },
-    success: false,
-    error: Error("Connection failed")
-  }
+{
+target:{host:"...",port:9910},
+success:true,
+result:{stdout:"...",...}
+},
+{
+target:{host:"...",port:9910},
+success:false,
+error:Error("Connectionfailed")
+}
 ]
 ```
 
 ---
 
-## Performance Tips
+##PerformanceTips
 
-### ✅ Use Sessions for Multiple Operations
+###UseSessionsforMultipleOperations
 ```javascript
-// Good - One connection, multiple commands
-const session = await createSession(target);
-await session.exec("cmd1");
-await session.exec("cmd2");
-await session.close();
+//Good-Oneconnection,multiplecommands
+constsession=awaitcreateSession(target);
+awaitsession.exec("cmd1");
+awaitsession.exec("cmd2");
+awaitsession.close();
 
-// Avoid - New connection per command
-await exec(target, "cmd1");
-await exec(target, "cmd2");
+//Avoid-Newconnectionpercommand
+awaitexec(target,"cmd1");
+awaitexec(target,"cmd2");
 ```
 
-### ✅ Use Batch Execution for Multiple Devices
+###UseBatchExecutionforMultipleDevices
 ```javascript
-// Good - Parallel execution
-const results = await execBatch(devices, "whoami", { parallel: true });
+//Good-Parallelexecution
+constresults=awaitexecBatch(devices,"whoami",{parallel:true});
 
-// Avoid - Sequential execution
-for (const d of devices) await exec(d, "whoami");
+//Avoid-Sequentialexecution
+for(constdofdevices)awaitexec(d,"whoami");
 ```
 
-### ✅ Use Contexts for Repeated Access
+###UseContextsforRepeatedAccess
 ```javascript
-// Good - One setup, reuse many times
-addContext("prod", target);
+//Good-Onesetup,reusemanytimes
+addContext("prod",target);
 setCurrentContext("prod");
-const t = await resolveTarget();
-// Use t many times
+constt=awaitresolveTarget();
+//Usetmanytimes
 
-// Avoid - Typing target repeatedly
-await exec("10.0.0.1:9910", "cmd1");
-await exec("10.0.0.1:9910", "cmd2");
+//Avoid-Typingtargetrepeatedly
+awaitexec("10.0.0.1:9910","cmd1");
+awaitexec("10.0.0.1:9910","cmd2");
 ```
 
 ---
 
-## Timeout Handling
+##TimeoutHandling
 
-All operations have defaults, customizable via options:
+Alloperationshavedefaults,customizableviaoptions:
 
 ```javascript
-// Discovery timeout
-await discoverDevices(2000); // 2 seconds
+//Discoverytimeout
+awaitdiscoverDevices(2000);//2seconds
 
-// All TCP operations default to 10 seconds
+//AllTCPoperationsdefaultto10seconds
 ```
 
 ---
 
-## Configuration Persistence
+##ConfigurationPersistence
 
 ```javascript
-import { getConfig, setConfig } from "@udb/client";
+import{getConfig,setConfig}from"@udb/client";
 
-// Read current config
-const cfg = getConfig();
+//Readcurrentconfig
+constcfg=getConfig();
 
-// Modify config
-cfg.lastTarget = { host: "...", port: 9910 };
+//Modifyconfig
+cfg.lastTarget={host:"...",port:9910};
 
-// Write back
+//Writeback
 setConfig(cfg);
 ```
 
 ---
 
-## CLI Equivalents
+##CLIEquivalents
 
-Compare CLI with API:
+CompareCLIwithAPI:
 
-| Operation | CLI | API |
+|Operation|CLI|API|
 |-----------|-----|-----|
-| Discover | `udb devices` | `await discoverDevices()` |
-| Status | `udb status` | `await status(target)` |
-| Execute | `udb exec "cmd"` | `await exec(target, "cmd")` |
-| Pair | `udb pair` | `await pair(target)` |
-| Batch | `udb group exec` | `await execOnGroup(group, cmd)` |
+|Discover|`udbdevices`|`awaitdiscoverDevices()`|
+|Status|`udbstatus`|`awaitstatus(target)`|
+|Execute|`udbexec"cmd"`|`awaitexec(target,"cmd")`|
+|Pair|`udbpair`|`awaitpair(target)`|
+|Batch|`udbgroupexec`|`awaitexecOnGroup(group,cmd)`|
 
 ---
 
-## Real-World Examples
+##Real-WorldExamples
 
-### CI/CD Deployment
+###CI/CDDeployment
 ```javascript
-import { execBatch } from "@udb/client";
-const devices = JSON.parse(process.env.TARGETS);
-const results = await execBatch(devices, "docker pull && docker start");
+import{execBatch}from"@udb/client";
+constdevices=JSON.parse(process.env.TARGETS);
+constresults=awaitexecBatch(devices,"dockerpull&&dockerstart");
 ```
 
-### Device Health Check
+###DeviceHealthCheck
 ```javascript
-import { discoverDevices, status } from "@udb/client";
-const devices = await discoverDevices();
-for (const d of devices) {
-  try {
-    const s = await status(d);
-    console.log(`${d.name}: ${s.pairingMode}`);
-  } catch (e) {
-    console.log(`${d.name}: OFFLINE`);
-  }
+import{discoverDevices,status}from"@udb/client";
+constdevices=awaitdiscoverDevices();
+for(constdofdevices){
+try{
+consts=awaitstatus(d);
+console.log(`${d.name}:${s.pairingMode}`);
+}catch(e){
+console.log(`${d.name}:OFFLINE`);
+}
 }
 ```
 
-### Fleet Labeling
+###FleetLabeling
 ```javascript
-import { createGroup, setLabels } from "@udb/client/fleet";
-createGroup("gateways", gatewayDevices);
-gatewayDevices.forEach(d => 
-  setLabels(d, { role: "gateway", env: "prod" })
+import{createGroup,setLabels}from"@udb/client/fleet";
+createGroup("gateways",gatewayDevices);
+gatewayDevices.forEach(d=>
+setLabels(d,{role:"gateway",env:"prod"})
 );
 ```
 
 ---
 
-## Debugging
+##Debugging
 
-### Enable Error Details
+###EnableErrorDetails
 ```javascript
-try {
-  await exec(target, "cmd");
-} catch (err) {
-  console.log(err.code);     // Error code string
-  console.log(err.message);  // Human message
-  console.log(err.details);  // Additional info (if available)
+try{
+awaitexec(target,"cmd");
+}catch(err){
+console.log(err.code);//Errorcodestring
+console.log(err.message);//Humanmessage
+console.log(err.details);//Additionalinfo(ifavailable)
 }
 ```
 
-### Verify Target Reachability
+###VerifyTargetReachability
 ```javascript
-import { probeTcp } from "@udb/client";
-const online = await probeTcp({ host: "192.168.1.100", port: 9910 });
+import{probeTcp}from"@udb/client";
+constonline=awaitprobeTcp({host:"10.0.0.1",port:9910});
 ```
 
-### Parse Target Strings
+###ParseTargetStrings
 ```javascript
-import { parseTarget } from "@udb/client";
-const t1 = parseTarget("10.0.0.1:9910");
-const t2 = parseTarget("tcp://example.com:9910");
+import{parseTarget}from"@udb/client";
+constt1=parseTarget("10.0.0.1:9910");
+constt2=parseTarget("tcp://example.com:9910");
 ```
 
 ---
 
-## Common Gotchas
+##CommonGotchas
 
-### ❌ Forgetting `await`
+###❌Forgetting`await`
 ```javascript
-// Wrong - Promise not awaited
-exec(target, "whoami");
+//Wrong-Promisenotawaited
+exec(target,"whoami");
 
-// Right
-await exec(target, "whoami");
+//Right
+awaitexec(target,"whoami");
 ```
 
-### ❌ Not Closing Sessions
+###❌NotClosingSessions
 ```javascript
-// Wrong - Resource leak
-const s = await createSession(target);
-await s.exec("cmd");
-// Forgot await s.close()
+//Wrong-Resourceleak
+consts=awaitcreateSession(target);
+awaits.exec("cmd");
+//Forgotawaits.close()
 
-// Right
-const s = await createSession(target);
-try {
-  await s.exec("cmd");
-} finally {
-  await s.close();
+//Right
+consts=awaitcreateSession(target);
+try{
+awaits.exec("cmd");
+}finally{
+awaits.close();
 }
 ```
 
-### ❌ Ignoring Command Errors
+###❌IgnoringCommandErrors
 ```javascript
-// Wrong - Command exit code not checked
-const r = await exec(target, "false"); // exit 1
+//Wrong-Commandexitcodenotchecked
+constr=awaitexec(target,"false");//exit1
 
-// Right - CommandError thrown
-try {
-  await exec(target, "false");
-} catch (err) {
-  if (err instanceof CommandError) {
-    console.log(`Exit code: ${err.code}`);
-  }
+//Right-CommandErrorthrown
+try{
+awaitexec(target,"false");
+}catch(err){
+if(errinstanceofCommandError){
+console.log(`Exitcode:${err.code}`);
+}
 }
 ```
 
 ---
 
-## Full Documentation
+##FullDocumentation
 
-For complete reference, see [API.md](./API.md)
+Forcompletereference,see[API.md](./API.md)
 
-For working examples, see [scripts/README.md](../scripts/README.md)
+Forworkingexamples,see[scripts/README.md](../scripts/README.md)
 
 ---
 
-**Last Updated:** Phase 3 Complete  
-**Status:** Production Ready  
-**License:** Apache-2.0
+**LastUpdated:**Phase3Complete
+**Status:**ProductionReady
+**License:**Apache-2.0

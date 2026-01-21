@@ -1,32 +1,28 @@
-# TCP Transport
+#TCPTransport
 
-TCP transport implementation for UDB.
+TCPtransportimplementationforUDB.
 
-## Status
+##Ports
 
-✅ **Implemented** - TCP is the primary transport for UDB.
-
-## Ports
-
-| Port | Protocol | Purpose |
+|Port|Protocol|Purpose|
 |------|----------|---------|
-| 9909 | UDP | Discovery (broadcast) |
-| 9910 | TCP | Control connection |
+|9909|UDP|Discovery(broadcast)|
+|9910|TCP|Controlconnection|
 
-## Usage
+##Usage
 
-TCP transport is used automatically when connecting to devices via IP address:
+TCPtransportisusedautomaticallywhenconnectingtodevicesviaIPaddress:
 
 ```bash
-udb pair 10.0.0.1:9910
-udb exec 10.0.0.1:9910 "whoami"
+udbpair10.0.0.1:9910
+udbexec10.0.0.1:9910"whoami"
 ```
 
-## Implementation
+##Implementation
 
-The TCP transport is integrated into:
+TheTCPtransportisintegratedinto:
 
-- `daemon/linux/udbd.js` - Server-side listener
-- `client/src/index.js` - Client-side connection
+-`daemon/linux/udbd.js`-Server-sidelistener
+-`client/src/index.js`-Client-sideconnection
 
-See `transport/abstract.ts` for the transport interface.
+See`transport/abstract.ts`forthetransportinterface.

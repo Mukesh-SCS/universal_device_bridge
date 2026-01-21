@@ -1,74 +1,62 @@
-# UDB v4 Features
+#UDBv4Features
 
-This directory contains optional v4 features that extend UDB beyond its core local-first functionality.
+Thisdirectorycontainsoptionalv4featuresthatextendUDBbeyonditscorelocal-firstfunctionality.
 
-## Design Principle
+##DesignPrinciple
 
-> **Local-first always works 100%. Cloud/GUI features are strictly optional.**
+>**Local-firstalwaysworks100%.Cloud/GUIfeaturesarestrictlyoptional.**
 
-All v4 features follow these rules:
-1. Core UDB works completely offline
-2. No cloud features are required for any operation
-3. Clear separation between local and optional features
-4. Opt-in only, never opt-out
+Allv4featuresfollowtheserules:
+1.CoreUDBworkscompletelyoffline
+2.Nocloudfeaturesarerequiredforanyoperation
+3.Clearseparationbetweenlocalandoptionalfeatures
+4.Opt-inonly,neveropt-out
 
-## Available Extensions
+##AvailableExtensions
 
-### Cloud (Optional)
+###Cloud(Optional)
 
-Optional cloud services for enhanced fleet management:
+Optionalcloudservicesforenhancedfleetmanagement:
 
-- **Discovery Relay** - Help find devices across networks
-- **Fleet Registry** - Optional device metadata storage
-- **Status Dashboard** - Web-based device monitoring
+-**DiscoveryRelay**-Helpfinddevicesacrossnetworks
+-**FleetRegistry**-Optionaldevicemetadatastorage
+-**StatusDashboard**-Web-baseddevicemonitoring
 
-See [cloud/README.md](./cloud/README.md)
+See[cloud/README.md](./cloud/README.md)
 
-### GUI (Optional)
+###GUI(Optional)
 
-Graphical interface for UDB:
+GraphicalinterfaceforUDB:
 
-- **Device Browser** - Visual device list
-- **Command Runner** - Execute commands with UI
-- **Log Viewer** - Live log streaming
-- **Fleet Dashboard** - Group management
+-**DeviceBrowser**-Visualdevicelist
+-**CommandRunner**-ExecutecommandswithUI
+-**LogViewer**-Livelogstreaming
+-**FleetDashboard**-Groupmanagement
 
-See [gui/README.md](./gui/README.md)
+See[gui/README.md](./gui/README.md)
 
-### Additional Transports
+###AdditionalTransports
 
-Extended transport support:
+Extendedtransportsupport:
 
-- **Bluetooth LE** - For BLE-enabled devices
-- **CAN Bus** - Automotive/industrial
-- **WebSocket** - Browser-based access
+-**BluetoothLE**-ForBLE-enableddevices
+-**CANBus**-Automotive/industrial
+-**WebSocket**-Browser-basedaccess
 
-See [transports/README.md](./transports/README.md)
+See[transports/README.md](./transports/README.md)
 
-## Status
+##GettingStarted
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Cloud Discovery Relay | 🔲 Planned | Optional helper |
-| Cloud Fleet Registry | 🔲 Planned | Optional storage |
-| Cloud Dashboard | 🔲 Planned | Web UI |
-| Desktop GUI | 🔲 Planned | Electron app |
-| BLE Transport | 🔲 Planned | Bluetooth LE |
-| CAN Transport | 🔲 Planned | Automotive |
-| WebSocket Transport | 🔲 Planned | Browser access |
-
-## Getting Started
-
-None of these features are required. Use only what you need:
+Noneofthesefeaturesarerequired.Useonlywhatyouneed:
 
 ```bash
-# Core UDB works without any v4 features
-udb devices
-udb exec "hostname"
+#CoreUDBworkswithoutanyv4features
+udbdevices
+udbexec"hostname"
 
-# Optionally enable cloud relay
-udb config set cloud.relay https://your-relay.example.com
+#Optionallyenablecloudrelay
+udbconfigsetcloud.relayhttps://your-relay.example.com
 
-# Optionally start GUI
-udb gui
+#OptionallystartGUI
+udbgui
 ```

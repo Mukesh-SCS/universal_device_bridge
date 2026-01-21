@@ -1,92 +1,92 @@
-# UDB GitHub Actions Integration
+#UDBGitHubActionsIntegration
 
-This example demonstrates how to use UDB in a CI/CD pipeline with GitHub Actions.
+ThisexampledemonstrateshowtouseUDBinaCI/CDpipelinewithGitHubActions.
 
-## Overview
+##Overview
 
-This workflow shows:
-1. Running the UDB simulator in CI
-2. Pairing with the device
-3. Running commands
-4. Collecting logs and artifacts
+Thisworkflowshows:
+1.RunningtheUDBsimulatorinCI
+2.Pairingwiththedevice
+3.Runningcommands
+4.Collectinglogsandartifacts
 
-## Quick Start
+##QuickStart
 
-Copy `.github/workflows/udb-example.yml` to your repository.
+Copy`.github/workflows/udb-example.yml`toyourrepository.
 
-## Files
+##Files
 
-- `workflows/udb-example.yml` - Example GitHub Actions workflow
-- `scripts/deploy.sh` - Example deployment script
+-`workflows/udb-example.yml`-ExampleGitHubActionsworkflow
+-`scripts/deploy.sh`-Exampledeploymentscript
 
-## Usage Patterns
+##UsagePatterns
 
-### Basic Command Execution
-
-```yaml
-- name: Run command on device
-  run: udb exec ${{ env.DEVICE_TARGET }} "systemctl restart myapp"
-```
-
-### Check Exit Codes
+###BasicCommandExecution
 
 ```yaml
-- name: Verify service running
-  run: |
-    udb exec ${{ env.DEVICE_TARGET }} "systemctl is-active myapp"
+-name:Runcommandondevice
+run:udbexec${{env.DEVICE_TARGET}}"systemctlrestartmyapp"
 ```
 
-### JSON Output for Parsing
+###CheckExitCodes
 
 ```yaml
-- name: Get device info
-  id: device-info
-  run: |
-    info=$(udb info ${{ env.DEVICE_TARGET }} --json)
-    echo "version=$(echo $info | jq -r '.version')" >> $GITHUB_OUTPUT
+-name:Verifyservicerunning
+run:|
+udbexec${{env.DEVICE_TARGET}}"systemctlis-activemyapp"
 ```
 
-### Fleet Operations
+###JSONOutputforParsing
 
 ```yaml
-- name: Deploy to cluster
-  run: |
-    udb group add cluster 10.0.0.1:9910 10.0.0.2:9910 10.0.0.3:9910
-    udb group exec cluster "systemctl restart myapp"
+-name:Getdeviceinfo
+id:device-info
+run:|
+info=$(udbinfo${{env.DEVICE_TARGET}}--json)
+echo"version=$(echo$info|jq-r'.version')">>$GITHUB_OUTPUT
 ```
 
-## Environment Variables
+###FleetOperations
 
-| Variable | Description |
+```yaml
+-name:Deploytocluster
+run:|
+udbgroupaddcluster10.0.0.1:991010.0.0.2:991010.0.0.3:9910
+udbgroupexeccluster"systemctlrestartmyapp"
+```
+
+##EnvironmentVariables
+
+|Variable|Description|
 |----------|-------------|
-| `UDB_TARGET` | Default target for commands |
-| `UDB_CONFIG_DIR` | Custom config directory |
-| `UDB_TIMEOUT` | Default timeout in ms |
+|`UDB_TARGET`|Defaulttargetforcommands|
+|`UDB_CONFIG_DIR`|Customconfigdirectory|
+|`UDB_TIMEOUT`|Defaulttimeoutinms|
 
-## Security Considerations
+##SecurityConsiderations
 
-1. **Keypair Management**: Store client keypair as a GitHub secret
-2. **Network Access**: Ensure runners can reach devices
-3. **Pairing**: Use auto-pairing for CI or pre-paired keys
+1.**KeypairManagement**:StoreclientkeypairasaGitHubsecret
+2.**NetworkAccess**:Ensurerunnerscanreachdevices
+3.**Pairing**:Useauto-pairingforCIorpre-pairedkeys
 
-## Troubleshooting
+##Troubleshooting
 
-### Connection Refused
+###ConnectionRefused
 
 ```yaml
-- name: Diagnose connectivity
-  run: udb doctor ${{ env.DEVICE_TARGET }}
+-name:Diagnoseconnectivity
+run:udbdoctor${{env.DEVICE_TARGET}}
 ```
 
-### Authentication Failed
+###AuthenticationFailed
 
-Ensure the keypair is correctly set up:
+Ensurethekeypairiscorrectlysetup:
 
 ```yaml
-- name: Setup UDB keypair
-  run: |
-    mkdir -p ~/.udb
-    echo "${{ secrets.UDB_PRIVATE_KEY }}" > ~/.udb/id_ed25519
-    echo "${{ secrets.UDB_PUBLIC_KEY }}" > ~/.udb/id_ed25519.pub
-    chmod 600 ~/.udb/id_ed25519
+-name:SetupUDBkeypair
+run:|
+mkdir-p~/.udb
+echo"${{secrets.UDB_PRIVATE_KEY}}">~/.udb/id_ed25519
+echo"${{secrets.UDB_PUBLIC_KEY}}">~/.udb/id_ed25519.pub
+chmod600~/.udb/id_ed25519
 ```
