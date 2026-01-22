@@ -2724,7 +2724,7 @@ async function main() {
   if (cmd === "inventory") return inventoryCmd();
   if (cmd === "start-server") return daemonStart();
   if (cmd === "kill-server") return daemonStop();
-  console.log(`Universal Device Bridge (UDB) - v0.8.2
+  console.log(`Universal Device Bridge (UDB) - v0.8.3
 udb-style device access for embedded systems, MCUs, and simulators.
 
 Usage:
