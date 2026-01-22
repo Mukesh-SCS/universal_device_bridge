@@ -68,6 +68,14 @@ jobs:
           path: dist
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         with:
-          files: dist/**/*
+          tag_name: ${{ github.ref_name }}
+          name: UDB ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+          dist/*
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
