@@ -10,30 +10,26 @@ permissions:
 
 jobs:
   build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.runner }}
+
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            target: linux-x64
-            pkgTarget: node18-linux-x64
-
-          - os: ubuntu-latest
-            target: linux-arm64
-            pkgTarget: node18-linux-arm64
-
-          - os: macos-latest
-            target: macos-arm64
-            pkgTarget: node18-macos-arm64
-
-          - os: windows-latest
-            target: win-x64
-            pkgTarget: node18-win-x64
-
-    runs-on: ${{ matrix.os }}
+          - os: linux-x64
+            runner: ubuntu-latest
+          - os: linux-arm64
+            runner: ubuntu-latest
+          - os: macos-x64
+            runner: macos-latest
+          - os: macos-arm64
+            runner: macos-latest
+          - os: win-x64
+            runner: windows-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -47,35 +43,32 @@ jobs:
       - name: Build CLI bundle
         run: node scripts/build-cli.js
 
-      - name: Build binary
-        run: |
-          node scripts/build-binaries.js --target ${{ matrix.target }}
+      - name: Build binaries
+        run: node scripts/build-binaries.js --target ${{ matrix.os }}
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: udb-${{ matrix.target }}
+          name: udb-${{ matrix.os }}
           path: dist/*
 
   release:
+    name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+      - name: Create release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: UDB ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-          files: |
-          dist/*
-          fail_on_unmatched_files: false
+          files: dist/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
