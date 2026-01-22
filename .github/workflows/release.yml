@@ -10,41 +10,76 @@ permissions:
 
 jobs:
   build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.runner }}
-
+    name: Build (${{ matrix.target }})
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: linux-x64
-            runner: ubuntu-latest
-          - os: linux-arm64
-            runner: ubuntu-latest
-          - os: macos-x64
-            runner: macos-latest
-          - os: macos-arm64
-            runner: macos-latest
-          - os: win-x64
-            runner: windows-latest
+          - target: linux-x64
+            os: ubuntu-latest
+          - target: linux-arm64
+            os: ubuntu-latest
+          - target: macos-x64
+            os: macos-14
+          - target: macos-arm64
+            os: macos-latest
+          - target: win-x64
+            os: windows-latest
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: "20"
+          cache: "npm"
 
-      - run: npm install
+      - name: Install deps
+        run: npm ci
 
-      - run: node scripts/build-cli.js
+      # Bundle the CLI (outputs cli/cli-bundle.cjs in your current setup)
+      - name: Build CLI bundle
+        run: node scripts/build-cli.js
 
-      - run: node scripts/build-binaries.js --target ${{ matrix.os }}
+      - name: Build binary
+        run: node scripts/build-binaries.js --target ${{ matrix.target }}
 
-      - uses: actions/upload-artifact@v4
+      - name: Prepare release files (nix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          BIN="dist/udb-${{ matrix.target }}"
+          if [[ "${{ matrix.target }}" == win-x64 ]]; then
+            BIN="dist/udb-win-x64.exe"
+          fi
+
+          cp "$BIN" release/
+          cd release
+          sha256sum "$(basename "$BIN")" > "$(basename "$BIN").sha256"
+
+      - name: Prepare release files (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          $bin = "dist\udb-win-x64.exe"
+          Copy-Item $bin release\
+          $hash = (Get-FileHash -Algorithm SHA256 "release\udb-win-x64.exe").Hash.ToLower()
+          "$hash  udb-win-x64.exe" | Out-File -Encoding ascii "release\udb-win-x64.exe.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: udb-${{ matrix.os }}
-          path: dist/*
+          name: udb-${{ matrix.target }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 7
 
   release:
     name: Create GitHub Release
@@ -52,22 +87,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
+          path: artifacts
 
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist
+      - name: Flatten artifacts into release dir
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          find artifacts -type f -maxdepth 3 -print -exec cp {} release/ \;
+          ls -la release
 
+      # CRITICAL FIX:
+      # Generate ONE combined SHA256SUMS file (prevents asset-name collisions)
+      - name: Generate combined SHA256SUMS
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release
+          # only checksum the binaries (not the .sha256 files)
+          sha256sum udb-* > SHA256SUMS
+          echo "SHA256SUMS generated:"
+          wc -l SHA256SUMS
 
-      - name: Create / overwrite release
+      - name: Publish release + upload assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          files: dist/**/*
-          fail_on_unmatched_files: false
-          overwrite: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            release/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
