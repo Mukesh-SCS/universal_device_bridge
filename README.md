@@ -64,13 +64,19 @@ irm https://udb-core.pages.dev/install.ps1 | iex
 
 ---
 
-## Supported Platforms
+## Platform Support
+
+UDB Core v0.7.0 provides prebuilt binaries for:
 
 - Windows (x64)
 - Linux (x64)
-- macOS (Apple Silicon)
+- macOS (Apple Silicon / arm64)
 
-> **Note:** Linux ARM64 and macOS Intel coming soon.
+Additional targets are planned:
+
+- Linux (arm64)
+- macOS (Intel x64)
+
 
 ### npm Install
 
