@@ -1263,7 +1263,7 @@ async function main() {
   if (cmd === "start-server") return daemonStart();
   if (cmd === "kill-server") return daemonStop();
 
-  console.log(`Universal Device Bridge (UDB) v0.7.0
+  console.log(`Universal Device Bridge (UDB) v0.7.4
 udb-style device access for embedded systems, MCUs, and simulators.
 
 Usage:

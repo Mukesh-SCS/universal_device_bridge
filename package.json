@@ -1,6 +1,6 @@
 {
   "name": "udb",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "private": true,
   "type": "module",
   "bin": {
@@ -17,7 +17,7 @@
     "build": "node scripts/build-binaries.js"
   },
   "pkg": {
-  "scripts": ["dist/cli-bundle.cjs"],
+  "scripts": ["cli/cli-bundle.cjs"],
   "targets": [
     "node18-linux-x64",
     "node18-linux-arm64",

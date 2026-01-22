@@ -1,9 +1,9 @@
 import esbuild from "esbuild";
 import fs from "node:fs";
+import path from "node:path";
 
-if (!fs.existsSync("dist")) {
-  fs.mkdirSync("dist");
-}
+const outDir = "cli";
+const outFile = path.join(outDir, "cli-bundle.cjs");
 
 await esbuild.build({
   entryPoints: ["cli/src/udb.js"],
@@ -11,8 +11,7 @@ await esbuild.build({
   platform: "node",
   format: "cjs",
   target: "node18",
-  outfile: "dist/cli-bundle.cjs",
-  sourcemap: false,
+  outfile: outFile,
 });
 
-console.log("CLI bundled to dist/cli-bundle.cjs");
+console.log("CLI bundled to cli/cli-bundle.cjs");
