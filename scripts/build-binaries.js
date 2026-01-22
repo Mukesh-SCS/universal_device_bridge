@@ -27,11 +27,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 
 const TARGETS = {
-  "linux-x64": "node20-linux-x64",
-  "linux-arm64": "node20-linux-arm64",
-  "macos-x64": "node20-macos-x64",
-  "macos-arm64": "node20-macos-arm64",
-  "win-x64": "node20-win-x64"
+  "linux-x64": "node18-linux-x64",
+  "linux-arm64": "node18-linux-arm64",
+  "macos-x64": "node18-macos-x64",
+  "macos-arm64": "node18-macos-arm64",
+  "win-x64": "node18-win-x64"
 };
 
 const OUTPUT_NAMES = {
@@ -117,31 +117,36 @@ function buildForTarget(platform, outputDir) {
   console.log(`   Target: ${target}`);
   console.log(`   Output: ${outputPath}`);
 
-  const entryPoint = path.join(ROOT, "cli", "src", "udb.js");
+  
+  const entryPoint = path.join(ROOT, "cli", "udb.cjs");
 
-  const result = spawnSync(`npx pkg ${entryPoint} --target ${target} --output ${outputPath} --compress GZip`, [], {
-    cwd: ROOT,
-    stdio: "inherit",
-    shell: true
-  });
+  const result = spawnSync(
+    `npx pkg ${entryPoint} --target ${target} --output ${outputPath} --compress GZip --options experimental-modules`,
+    [],
+    {
+      cwd: ROOT,
+      stdio: "inherit",
+      shell: true
+    }
+  );
 
   if (result.status !== 0) {
     throw new Error(`Build failed for ${platform}`);
   }
 
-  // Compute checksum
+  // Checksum
   if (fs.existsSync(outputPath)) {
     const checksum = computeChecksum(outputPath);
-    const checksumFile = outputPath + ".sha256";
-    fs.writeFileSync(checksumFile, `${checksum}  ${outputName}\n`);
-    console.log(`   ✓ Checksum: ${checksum.substring(0, 16)}...`);
-
-    const stats = fs.statSync(outputPath);
-    console.log(`   ✓ Size: ${(stats.size / 1024 / 1024).toFixed(1)} MB`);
+    fs.writeFileSync(`${outputPath}.sha256`, `${checksum}  ${outputName}\n`);
+    console.log(`   ✓ Checksum: ${checksum.slice(0, 16)}...`);
+    console.log(
+      `   ✓ Size: ${(fs.statSync(outputPath).size / 1024 / 1024).toFixed(1)} MB`
+    );
   }
 
   return outputPath;
 }
+
 
 async function main() {
   console.log("╔════════════════════════════════════════╗");
