@@ -999,39 +999,23 @@ async function inventoryCmd() {
 
 async function pushCmd() {
   try {
-    if (rest.length < 2) {
-      usageError('Usage: udb push [ip:port] <local-path> <remote-path>');
+    function parsePushArgs(args) {
+      if (args.length === 2) {
+        return { target: null, src: args[0], dst: args[1] };
+      }
+      if (args.length === 3) {
+        return { target: args[0], src: args[1], dst: args[2] };
+      }
+      usageError('Usage: udb push [target] <src> <dst>');
     }
 
-    // Check if first arg is a target
-    let target;
-    let localPath;
-    let remotePath;
-
-    if (rest[0].includes(":")) {
-      target = rest[0];
-      localPath = rest[1];
-      remotePath = rest[2];
-    } else {
-      target = await resolveTargetInteractive();
-      localPath = rest[0];
-      remotePath = rest[1];
-    }
-
-    if (!localPath || !remotePath) {
-      usageError('Usage: udb push [ip:port] <local-path> <remote-path>');
-    }
-
-    // Check if local file exists
-    if (!fs.existsSync(localPath)) {
-      usageError(`Local file not found: ${localPath}`);
-    }
-
-    const stats = fs.statSync(localPath);
-    console.log(`Pushing ${localPath} (${stats.size} bytes) to ${target}:${remotePath}...`);
-
-    const result = await push(target, localPath, remotePath);
-
+    const { target, src, dst } = parsePushArgs(rest);
+    if (!src || !dst) usageError('Usage: udb push [target] <src> <dst>');
+    if (!fs.existsSync(src)) usageError(`Local file not found: ${src}`);
+    const resolvedTarget = await resolveTarget(target);
+    const stats = fs.statSync(src);
+    console.log(`Pushing ${src} (${stats.size} bytes) to ${resolvedTarget.host}:${dst}...`);
+    const result = await push(resolvedTarget, src, dst);
     console.log(`✓ Pushed ${result.bytes} bytes successfully`);
   } catch (err) {
     handleError(err);
@@ -1040,34 +1024,22 @@ async function pushCmd() {
 
 async function pullCmd() {
   try {
-    if (rest.length < 2) {
-      usageError('Usage: udb pull [ip:port] <remote-path> <local-path>');
+    function parsePullArgs(args) {
+      if (args.length === 2) {
+        return { target: null, src: args[0], dst: args[1] };
+      }
+      if (args.length === 3) {
+        return { target: args[0], src: args[1], dst: args[2] };
+      }
+      usageError('Usage: udb pull [target] <src> <dst>');
     }
 
-    // Check if first arg is a target
-    let target;
-    let remotePath;
-    let localPath;
-
-    if (rest[0].includes(":")) {
-      target = rest[0];
-      remotePath = rest[1];
-      localPath = rest[2];
-    } else {
-      target = await resolveTargetInteractive();
-      remotePath = rest[0];
-      localPath = rest[1];
-    }
-
-    if (!remotePath || !localPath) {
-      usageError('Usage: udb pull [ip:port] <remote-path> <local-path>');
-    }
-
-    console.log(`Pulling ${remotePath} from ${target} to ${localPath}...`);
-
-    const result = await pull(target, remotePath, localPath);
-
-    console.log(`✓ Pulled ${result.bytes} bytes successfully to ${localPath}`);
+    const { target, src, dst } = parsePullArgs(rest);
+    if (!src || !dst) usageError('Usage: udb pull [target] <src> <dst>');
+    const resolvedTarget = await resolveTarget(target);
+    console.log(`Pulling ${src} from ${resolvedTarget.host} to ${dst}...`);
+    const result = await pull(resolvedTarget, src, dst);
+    console.log(`✓ Pulled ${result.bytes} bytes successfully to ${dst}`);
   } catch (err) {
     handleError(err);
   }
@@ -1263,7 +1235,7 @@ async function main() {
   if (cmd === "start-server") return daemonStart();
   if (cmd === "kill-server") return daemonStop();
 
-  console.log(`Universal Device Bridge (UDB) v0.7.4
+  console.log(`Universal Device Bridge (UDB) v0.7.5
 udb-style device access for embedded systems, MCUs, and simulators.
 
 Usage:

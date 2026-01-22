@@ -5,6 +5,23 @@ All notable changes to UDB are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## v0.7.5 - 2026-01-21
+
+### Fixed
+- `udb push` and `udb pull` now use default context when target is omitted
+- Unified target resolution across exec, shell, push, pull, status, info
+- Eliminated need to repeatedly specify `ip:port` after pairing
+- Improved CLI behavior to match ADB-style workflows
+
+### Improved
+- More consistent interactive device selection
+- Better error messages when no default device is set
+
+### Notes
+- No protocol changes
+- Fully backward compatible
+
+
 ## [0.7.0] - 2026-01-21
 
 ### Added
