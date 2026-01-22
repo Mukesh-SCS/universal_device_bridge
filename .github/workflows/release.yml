@@ -1,72 +1,77 @@
-name: Build & Release UDB
+name: Release UDB
 
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Build (${{ matrix.target }})
-    runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
-            target: win-x64
           - os: ubuntu-latest
             target: linux-x64
+            pkgTarget: node18-linux-x64
+
           - os: ubuntu-latest
             target: linux-arm64
-          - os: macos-latest
+            pkgTarget: node18-linux-arm64
+
+          - os: macos-13
             target: macos-x64
+            pkgTarget: node18-macos-x64
+
           - os: macos-latest
             target: macos-arm64
+            pkgTarget: node18-macos-arm64
+
+          - os: windows-latest
+            target: win-x64
+            pkgTarget: node18-win-x64
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 18
 
-      - run: npm install
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build CLI bundle
+        run: node scripts/build-cli.js
 
       - name: Build binary
-        run: node scripts/build-binaries.js --target ${{ matrix.target }}
+        run: |
+          node scripts/build-binaries.js --target ${{ matrix.target }}
 
-      - name: Upload artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: udb-${{ matrix.target }}
-          path: dist/
+          path: dist/*
 
   release:
-    name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Download artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: dist-all
+          path: dist
 
-      - name: Assemble release assets
-        run: |
-          mkdir dist
-          for d in dist-all/*; do
-            cp "$d"/* dist/
-          done
-
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: dist/**/*
