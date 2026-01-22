@@ -66,16 +66,22 @@ irm https://udb-core.pages.dev/install.ps1 | iex
 
 ## Platform Support
 
-UDB Core v0.7.0 provides prebuilt binaries for:
+Universal Device Bridge (UDB) provides prebuilt binaries for the following platforms:
 
-- Windows (x64)
-- Linux (x64)
-- macOS (Apple Silicon / arm64)
+| Platform | Architecture | Status |
+|--------|-------------|--------|
+| Linux | x86_64 | ✅ Fully supported |
+| Linux | arm64 | ✅ Fully supported |
+| Windows | x86_64 | ✅ Fully supported |
+| macOS | arm64 (Apple Silicon) | ✅ Fully supported |
+| macOS | x86_64 (Intel) | ⚠️ Best-effort / legacy |
 
-Additional targets are planned:
+### Notes
 
-- Linux (arm64)
-- macOS (Intel x64)
+- Apple Silicon (M1/M2/M3) is the primary macOS target.
+- Intel macOS (x86_64) support is **best-effort only** and may be removed in future releases due to upstream GitHub Actions runner deprecations.
+- macOS users on Intel hardware are encouraged to migrate to Apple Silicon or build from source if required.
+
 
 
 ### npm Install
