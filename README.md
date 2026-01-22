@@ -62,6 +62,16 @@ curl -fsSL https://udb-core.pages.dev/install.sh | sh
 irm https://udb-core.pages.dev/install.ps1 | iex
 ```
 
+---
+
+## Supported Platforms
+
+- Windows (x64)
+- Linux (x64)
+- macOS (Apple Silicon)
+
+> **Note:** Linux ARM64 and macOS Intel coming soon.
+
 ### npm Install
 
 ```bash
