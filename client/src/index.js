@@ -893,7 +893,21 @@ export class UdbSession {
     return new Promise((resolve, reject) => {
       const { publicKeyPem } = loadOrCreateClientKeypair();
 
+      // Connection timeout (5 seconds)
+      const connectTimeout = setTimeout(() => {
+        if (this.socket) {
+          this.socket.destroy();
+        }
+        reject(new ConnectionError("Connection timeout - unable to connect to device"));
+      }, 5000);
+
       this.socket = net.createConnection(this.target);
+
+      // Connection error handler
+      this.socket.on("error", (err) => {
+        clearTimeout(connectTimeout);
+        reject(new ConnectionError(err.message));
+      });
 
       this.decoder = createFrameDecoder((m) => {
         if (m.type === MSG.AUTH_CHALLENGE) {
@@ -908,6 +922,7 @@ export class UdbSession {
         }
 
         if (m.type === MSG.AUTH_OK) {
+          clearTimeout(connectTimeout);
           this.authenticated = true;
           resolve();
           return;
@@ -942,11 +957,10 @@ export class UdbSession {
       });
 
       this.socket.on("data", this.decoder);
-      this.socket.on("error", (err) => {
-        reject(new ConnectionError(err.message));
-      });
 
       this.socket.on("connect", () => {
+        // Clear connection timeout once connected
+        clearTimeout(connectTimeout);
         this.socket.write(
           encodeFrame({
             type: MSG.HELLO,

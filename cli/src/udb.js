@@ -14,8 +14,31 @@ import readline from "node:readline";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Handle both ESM and CJS contexts (for pkg bundling)
+// pkg automatically provides __dirname in the bundle
+let __filename, __dirname;
+
+try {
+  // Try to use import.meta.url (works in ESM source, undefined in CJS bundle)
+  const metaUrl = typeof import.meta !== 'undefined' ? import.meta.url : undefined;
+  if (metaUrl) {
+    __filename = fileURLToPath(metaUrl);
+    __dirname = path.dirname(__filename);
+  } else {
+    throw new Error('import.meta.url not available');
+  }
+} catch (e) {
+  // In pkg bundle, __dirname is automatically provided by pkg
+  // Check if we're in pkg (process.pkg is set by pkg) or if __dirname exists
+  if (process.pkg || (typeof __dirname !== 'undefined' && __dirname)) {
+    // pkg provides __dirname automatically - use it
+    __filename = path.join(__dirname, 'udb.js');
+  } else {
+    // Fallback for other CJS contexts (shouldn't happen in pkg)
+    __dirname = process.cwd();
+    __filename = path.join(__dirname, 'cli', 'src', 'udb.js');
+  }
+}
 
 import {
   discoverDevices,
@@ -239,7 +262,20 @@ async function daemonStartCmd() {
 
     // Resolve daemon path relative to project root
     // CLI is at cli/src/udb.js, daemon is at daemon/linux/udbd.js
-    const projectRoot = path.resolve(__dirname, "../..");
+    // In pkg bundle, __dirname points to the bundle location, so we need to find the project root differently
+    let projectRoot;
+    if (__dirname.includes('snapshot') || __dirname.includes('pkg')) {
+      // Running from pkg bundle - use process.cwd() or try to find the project
+      projectRoot = process.cwd();
+      // Try to find daemon relative to current working directory
+      const possibleDaemonPath = path.join(projectRoot, "daemon", "linux", "udbd.js");
+      if (!fs.existsSync(possibleDaemonPath)) {
+        // If not found, assume we're in the project root already
+        projectRoot = path.resolve(__dirname);
+      }
+    } else {
+      projectRoot = path.resolve(__dirname, "../..");
+    }
     const daemonPath = path.join(projectRoot, "daemon", "linux", "udbd.js");
     
     if (!fs.existsSync(daemonPath)) {
@@ -657,15 +693,15 @@ async function shellCmd() {
   let restoreTerminal = false;
   
   try {
-    let targetArg;
+    let target;
 
+    // If explicit target provided (ip:port), parse it directly to avoid discovery delay
     if (rest[0] && rest[0].includes(":")) {
-      targetArg = rest[0];
+      target = parseTarget(rest[0]);
     } else {
-      targetArg = undefined;
+      // No explicit target - use interactive resolution (may do discovery)
+      target = await resolveTargetInteractive(undefined);
     }
-
-    const target = await resolveTargetInteractive(targetArg);
     
     // Import streaming client
     const { createStreamingSession } = await import("@udb/client");

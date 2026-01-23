@@ -12,6 +12,10 @@ await esbuild.build({
   format: "cjs",
   target: "node18",
   outfile: outFile,
+  // Suppress the import.meta warning - it's handled in the code
+  logOverride: {
+    "empty-import-meta": "silent"
+  },
 });
 
 console.log("CLI bundled to cli/cli-bundle.cjs");
