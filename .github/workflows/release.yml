@@ -85,7 +85,18 @@ jobs:
         shell: bash
         run: |
           cd dist
-          sha256sum udb-* > SHA256SUMS || shasum -a 256 udb-* | awk '{print $1 "  " $2}' > SHA256SUMS
+          # Find all binary files recursively (not directories)
+          find . -type f -name "udb-*" ! -name "*.sha256" ! -name "SHA256SUMS" | while read file; do
+            filename=$(basename "$file")
+            if command -v sha256sum &> /dev/null; then
+              checksum=$(sha256sum "$file" | awk '{print $1}')
+            else
+              checksum=$(shasum -a 256 "$file" | awk '{print $1}')
+            fi
+            echo "$checksum  $filename" >> SHA256SUMS
+          done
+          # Sort the file
+          sort SHA256SUMS -o SHA256SUMS
 
       - name: Create release
         uses: softprops/action-gh-release@v2
