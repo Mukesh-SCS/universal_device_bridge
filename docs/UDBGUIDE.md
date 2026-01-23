@@ -43,13 +43,14 @@ Target audience: maintainers and contributors before tagging a release.
 Run on **both laptops**:
 
 ```bash
-udb --version
+udb info
 node --version
 ```
 
 Expected:
 
 * `udb` is resolvable from PATH
+* `udb info` shows help or requires a target (command works)
 * Node versions are compatible (note any major mismatch)
 
 ---
@@ -71,14 +72,21 @@ Expected:
 
 ### Verify ports
 
+**Linux/macOS:**
 ```bash
 netstat -an | grep 9910
 netstat -an | grep 9909
 ```
 
+**Windows:**
+```powershell
+netstat -ano | findstr ":9910"
+netstat -ano | findstr ":9909"
+```
+
 Expected:
 
-* Both ports are listening
+* Both ports are listening (TCP 9910, UDP 9909)
 
 ---
 
@@ -110,6 +118,13 @@ Note: TCP working without UDP is acceptable.
 
 ## Phase 4: Pairing
 
+**Option A: Connect then pair (recommended)**
+```bash
+udb connect <LaptopA_IP>:9910
+udb pair
+```
+
+**Option B: Pair with explicit target**
 ```bash
 udb pair <LaptopA_IP>:9910
 ```
@@ -121,6 +136,10 @@ Expected:
 Verify pairing:
 
 ```bash
+# If using connect, IP is optional
+udb list-paired
+
+# Or with explicit target
 udb list-paired <LaptopA_IP>:9910
 ```
 
@@ -130,10 +149,19 @@ Expected:
 
 Failure here indicates broken auth persistence.
 
+**Note:** After `udb connect`, you can omit the IP address for `pair`, `list-paired`, and other commands.
+
 ---
 
 ## Phase 5: Stateless Command Execution
 
+**If you used `udb connect` in Phase 4, IP is optional:**
+```bash
+udb exec "whoami"
+udb exec "pwd"
+```
+
+**Or with explicit target:**
 ```bash
 udb exec <LaptopA_IP>:9910 "whoami"
 udb exec <LaptopA_IP>:9910 "pwd"
@@ -148,6 +176,8 @@ Expected:
 ### Forced failure
 
 ```bash
+udb exec "false"
+# or
 udb exec <LaptopA_IP>:9910 "false"
 ```
 
@@ -160,6 +190,12 @@ Expected:
 
 ## Phase 6: Streaming Shell
 
+**If you used `udb connect` in Phase 4, IP is optional:**
+```bash
+udb shell
+```
+
+**Or with explicit target:**
 ```bash
 udb shell <LaptopA_IP>:9910
 ```
@@ -186,6 +222,9 @@ If terminal breaks, shell cleanup is incorrect.
 
 ## Phase 7: File Transfer Integrity
 
+**Note:** File transfer (push/pull) is currently only supported by the simulator daemon. The Linux daemon does not yet implement file transfer operations.
+
+**For simulator testing:**
 ```bash
 echo "UDB TEST $(date)" > test.txt
 udb push <LaptopA_IP>:9910 test.txt /test/test.txt
@@ -193,7 +232,7 @@ udb pull <LaptopA_IP>:9910 /test/test.txt pulled.txt
 diff test.txt pulled.txt
 ```
 
-Expected:
+Expected (simulator only):
 
 * No diff
 * Correct byte counts reported
@@ -210,10 +249,26 @@ Expected:
 
 If this succeeds, it is a critical security bug.
 
+**For Linux daemon:** Skip this phase or test with simulator daemon (`daemon/simulator/udbd-sim.js`).
+
 ---
 
 ## Phase 8: Context Management
 
+**Test 1: Default context (via connect)**
+```bash
+udb connect <LaptopA_IP>:9910
+udb exec "hostname"
+udb disconnect
+```
+
+Expected:
+
+* No IP specified after connect
+* Correct device targeted
+* Disconnect clears the context
+
+**Test 2: Named contexts**
 ```bash
 udb context add lab <LaptopA_IP>:9910
 udb context use lab

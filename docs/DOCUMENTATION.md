@@ -10,6 +10,8 @@ Complete documentation for Universal Device Bridge.
 - [Architecture](#architecture)
 - [Installation](#installation)
 - [Platform Support](#platform-support)
+- [CLI Commands](#cli-commands)
+- [Context Management](#context-management)
 - [Security](#security)
 - [Exit Codes](#exit-codes)
 - [Reporting Issues](#reporting-issues)
@@ -89,12 +91,12 @@ Universal Device Bridge (UDB) is a **local-first, offline-capable** device acces
 
 **Linux / macOS:**
 ```bash
-curl -fsSL https://udb.dev/install.sh | sh
+curl -fsSL https://udb-core.pages.dev/install.sh | sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-irm https://udb.dev/install.ps1 | iex
+irm https://udb-core.pages.dev/install.ps1 | iex
 ```
 
 ### npm Install
@@ -137,6 +139,105 @@ Download prebuilt binaries from [GitHub Releases](https://github.com/Mukesh-SCS/
 | Linux ARM |
 | Simulator |
 | Serial devices |
+
+---
+
+## CLI Commands
+
+### Connection Management
+
+```bash
+# Connect to a device (sets as default context)
+udb connect <ip:port | device-name>
+
+# Disconnect from current device
+udb disconnect
+```
+
+**After `udb connect`, you can omit the IP address for subsequent commands:**
+```bash
+udb connect 10.0.0.1:9910
+udb pair              # No IP needed
+udb exec "whoami"     # No IP needed
+udb shell             # No IP needed
+```
+
+### Device Operations
+
+```bash
+# Discover devices
+udb devices [--json]
+
+# Get device status
+udb status [ip:port] [--json]
+
+# Pair with device (uses current context if IP omitted)
+udb pair [ip:port]
+
+# Unpair from device
+udb unpair [ip:port] [--all | --fp <fingerprint>]
+
+# List paired clients
+udb list-paired [ip:port] [--json]
+
+# Execute command (uses current context if IP omitted)
+udb exec [ip:port] "<cmd>"
+
+# Interactive shell
+udb shell [ip:port]
+
+# File transfer
+udb push [ip:port] <local-path> <remote-path>
+udb pull [ip:port] <remote-path> <local-path>
+```
+
+---
+
+## Context Management
+
+UDB uses **contexts** to remember device addresses, so you don't need to specify the IP for every command.
+
+### Default Context (via `connect`)
+
+```bash
+# Connect sets a "default" context
+udb connect 10.0.0.1:9910
+
+# All commands now use this device
+udb pair
+udb exec "whoami"
+udb shell
+
+# Disconnect clears the default context
+udb disconnect
+```
+
+### Named Contexts
+
+```bash
+# Create a named context
+udb context add production 10.0.0.100:9910
+udb context add staging 10.0.1.100:9910
+
+# Switch between contexts
+udb context use production
+udb exec "hostname"  # Runs on production
+
+udb context use staging
+udb exec "hostname"  # Runs on staging
+
+# List all contexts
+udb context list
+```
+
+### Context Resolution Order
+
+When a command doesn't specify an IP address, UDB resolves the target in this order:
+
+1. **Explicit target** - If `ip:port` is provided, use it
+2. **Current context** - Use the active context (set by `connect` or `context use`)
+3. **Last target** - Use the last device you connected to
+4. **Discovery** - Try to discover a single device on the network
 
 ---
 

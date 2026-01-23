@@ -59,6 +59,9 @@ import {
   setCurrentContext,
   addContext,
   getContext,
+  removeContext,
+  getConfig,
+  setConfig,
   UdbError,
   AuthError,
   ConnectionError,
@@ -1002,6 +1005,45 @@ async function contextUseCmd() {
   }
 }
 
+async function disconnectCmd() {
+  try {
+    const current = getCurrentContextName();
+    
+    if (!current) {
+      if (json) {
+        console.log(JSON.stringify({ success: false, message: "No active connection" }, null, 2));
+      } else {
+        console.log("No active connection to disconnect");
+      }
+      return;
+    }
+
+    // Remove the default context (created by connect)
+    if (current === "default") {
+      removeContext("default");
+      if (json) {
+        console.log(JSON.stringify({ success: true, disconnected: true }, null, 2));
+      } else {
+        console.log("Disconnected from device");
+      }
+    } else {
+      // For named contexts, just clear the current context but keep the context definition
+      const config = getConfig();
+      delete config.currentContext;
+      setConfig(config);
+      
+      if (json) {
+        console.log(JSON.stringify({ success: true, disconnected: true, context: current }, null, 2));
+      } else {
+        console.log(`Disconnected from context: ${current}`);
+        console.log(`(Context '${current}' still exists. Use 'udb context use ${current}' to reconnect.)`);
+      }
+    }
+  } catch (err) {
+    handleError(err);
+  }
+}
+
 /* ===================== fleet commands ===================== */
 
 async function groupListCmd() {
@@ -1347,6 +1389,7 @@ async function main() {
   if (cmd === "start-server") return daemonStartCmd();
   if (cmd === "kill-server") return daemonStopCmd();
   if (cmd === "connect") return connectCmd();
+  if (cmd === "disconnect") return disconnectCmd();
   if (cmd === "context" && rest[0] === "list") return contextListCmd();
   if (cmd === "context" && rest[0] === "add") return contextAddCmd();
   if (cmd === "context" && rest[0] === "use") return contextUseCmd();
@@ -1361,6 +1404,7 @@ udb-style device access for embedded systems, MCUs, and simulators.
 Usage:
   udb devices                       Discover devices on the network
   udb connect <target>              Connect to device (sets as default)
+  udb disconnect                    Disconnect from current device
   udb shell                         Interactive shell
   udb exec "<cmd>"                  Run command
   udb push <src> <dst>              Push file to device
@@ -1371,9 +1415,9 @@ Device Management:
   udb info [target]                 Get device info
   udb ping [target]                 Check device connectivity
   udb doctor [target]               Diagnose connection issues
-  udb pair <target>                 Pair with a device
-  udb unpair <target> [--all|--fp]  Unpair from a device
-  udb list-paired <target>          List paired clients
+  udb pair [target]                 Pair with a device (uses current context if omitted)
+  udb unpair [target] [--all|--fp]  Unpair from a device
+  udb list-paired [target]           List paired clients
 
 Context Management:
   udb context list                  List saved contexts

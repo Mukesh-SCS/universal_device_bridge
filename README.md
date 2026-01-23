@@ -112,12 +112,21 @@ udb devices
 udb devices --json
 ```
 
-### 3. Pair and execute
+### 3. Connect and pair
 
 ```bash
-udb pair 10.0.0.1:9910
+# Connect to device (sets as default context)
+udb connect 10.0.0.1:9910
+
+# Pair with device (IP not needed after connect)
+udb pair
+
+# Execute commands (IP not needed)
 udb exec "whoami"
+udb shell
 ```
+
+**Note:** After `udb connect`, you can omit the IP address for subsequent commands. Use `udb disconnect` to clear the connection.
 
 ---
 
@@ -129,16 +138,22 @@ udb exec "whoami"
 # Discover devices on network
 udb devices [--json]
 
+# Connect to device (sets as default context)
+udb connect <ip:port | device-name>
+
+# Disconnect from current device
+udb disconnect
+
 # Get device status
 udb status [ip:port] [--json]
 
-# Pair with device
-udb pair <ip:port>
+# Pair with device (uses current context if IP omitted)
+udb pair [ip:port]
 
 # Unpair from device
-udb unpair <ip:port> [--all | --fp <fingerprint>]
+udb unpair [ip:port] [--all | --fp <fingerprint>]
 
-# Execute command
+# Execute command (uses current context if IP omitted)
 udb exec [ip:port] "<cmd>"
 
 # Push file to device
@@ -148,13 +163,24 @@ udb push [ip:port] <local-path> <remote-path>
 udb pull [ip:port] <remote-path> <local-path>
 
 # List paired clients
-udb list-paired <ip:port> [--json]
+udb list-paired [ip:port] [--json]
 ```
 
 ### Context Management
 
 ```bash
-# Save a device as a context
+# Connect to device (creates "default" context)
+udb connect 10.0.0.1:9910
+
+# All commands now use this device (IP not needed)
+udb pair
+udb exec "whoami"
+udb shell
+
+# Disconnect (clears default context)
+udb disconnect
+
+# Save a device as a named context
 udb context add lab 10.0.0.1:9910
 
 # Select active context
@@ -297,13 +323,23 @@ Contexts are stored in `~/.udb/config.json` and work offline.
 ### Example 1: Basic execution
 
 ```bash
-udb pair 10.0.0.1:9910
+# Connect and pair
+udb connect 10.0.0.1:9910
+udb pair
+
+# Execute commands (no IP needed)
 udb exec "uptime"
+udb shell
 ```
 
 ### Example 2: Using contexts
 
 ```bash
+# Connect creates default context
+udb connect 10.0.0.1:9910
+udb exec "df -h"
+
+# Or use named contexts
 udb context add lab 10.0.0.1:9910
 udb context use lab
 udb exec "df -h"
