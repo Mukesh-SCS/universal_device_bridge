@@ -3,7 +3,7 @@
 # UDB Installer for Linux and macOS
 #
 # Usage:
-#   curl -fsSL https://udb.pages.dev/install.sh | sh
+#   curl -fsSL https://udb-core.pages.dev/install.sh | sh
 #
 # Options:
 #   --version <ver>   Install specific version (default: latest)

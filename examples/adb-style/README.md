@@ -6,7 +6,7 @@ UDBworkslikeAndroid'sudbbutforanydevice.Theseexamplesshowcommonworkflows.
 
 ```bash
 #InstallUDB
-curl-fsSLhttps://get.udb.dev|sh
+curl-fsSLhttps://udb-core.pages.dev/install.sh|sh
 
 #Discoverdevices
 udbdevices

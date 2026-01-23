@@ -12,6 +12,10 @@ import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import {
   discoverDevices,
@@ -214,59 +218,141 @@ function handleError(err) {
 
 /* ===================== daemon commands ===================== */
 
-async function daemonStart() {
-  fs.mkdirSync(UDB_DIR, { recursive: true });
+async function daemonStartCmd() {
+  try {
+    fs.mkdirSync(UDB_DIR, { recursive: true });
+    
+    // Check if daemon is already running
+    if (fs.existsSync(PID_FILE)) {
+      const pid = Number(fs.readFileSync(PID_FILE, "utf8"));
+      if (isRunning(pid)) {
+        if (json) {
+          console.log(JSON.stringify({ success: true, message: `Daemon already running (pid ${pid})` }, null, 2));
+        } else {
+          console.log(`Daemon already running (pid ${pid})`);
+        }
+        return;
+      }
+      // Stale PID file, remove it
+      fs.unlinkSync(PID_FILE);
+    }
 
-  if (fs.existsSync(PID_FILE)) {
-    const pid = Number(fs.readFileSync(PID_FILE, "utf8"));
-    if (isRunning(pid)) {
-      console.log(`Daemon already running (pid ${pid})`);
+    // Resolve daemon path relative to project root
+    // CLI is at cli/src/udb.js, daemon is at daemon/linux/udbd.js
+    const projectRoot = path.resolve(__dirname, "../..");
+    const daemonPath = path.join(projectRoot, "daemon", "linux", "udbd.js");
+    
+    if (!fs.existsSync(daemonPath)) {
+      die(`Daemon not found at ${daemonPath}`);
+    }
+
+    // Start daemon with proper arguments
+    const child = spawn("node", [
+      daemonPath,
+      "--host", "0.0.0.0",
+      "--tcp", "9910",
+      "--udp", "9909",
+      "--pairing", "auto"
+    ], {
+      detached: true,
+      stdio: "ignore",
+      cwd: projectRoot
+    });
+
+    // Write PID file
+    fs.writeFileSync(PID_FILE, String(child.pid));
+    child.unref();
+
+    if (json) {
+      console.log(JSON.stringify({ success: true, message: `Daemon started (pid ${child.pid})` }, null, 2));
+    } else {
+      console.log(`Daemon started (pid ${child.pid})`);
+    }
+  } catch (err) {
+    handleError(err);
+  }
+}
+
+async function daemonStopCmd() {
+  try {
+    if (!fs.existsSync(PID_FILE)) {
+      if (json) {
+        console.log(JSON.stringify({ success: false, message: "Daemon not running" }, null, 2));
+      } else {
+        console.log("Daemon not running");
+      }
       return;
     }
-    fs.unlinkSync(PID_FILE);
+
+    const pid = Number(fs.readFileSync(PID_FILE, "utf8"));
+    
+    try {
+      process.kill(pid, "SIGTERM");
+      // Wait a bit for graceful shutdown
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check if still running, force kill if needed
+      if (isRunning(pid)) {
+        process.kill(pid, "SIGKILL");
+      }
+      
+      if (json) {
+        console.log(JSON.stringify({ success: true, message: `Daemon stopped (pid ${pid})` }, null, 2));
+      } else {
+        console.log(`Daemon stopped (pid ${pid})`);
+      }
+    } catch (err) {
+      if (err.code === "ESRCH") {
+        if (json) {
+          console.log(JSON.stringify({ success: false, message: "Daemon process already dead" }, null, 2));
+        } else {
+          console.log("Daemon process already dead");
+        }
+      } else {
+        throw err;
+      }
+    }
+    
+    // Remove PID file
+    if (fs.existsSync(PID_FILE)) {
+      fs.unlinkSync(PID_FILE);
+    }
+  } catch (err) {
+    handleError(err);
   }
-
-  const daemonPath = path.resolve("daemon/linux/udbd.js");
-
-  const child = spawn("node", [daemonPath, "--pairing", "auto"], {
-    detached: true,
-    stdio: "ignore"
-  });
-
-  child.unref();
-  fs.writeFileSync(PID_FILE, String(child.pid));
-  console.log(`Daemon started (pid ${child.pid})`);
 }
 
-async function daemonStop() {
-  if (!fs.existsSync(PID_FILE)) {
-    console.log("Daemon not running");
-    return;
-  }
-
-  const pid = Number(fs.readFileSync(PID_FILE, "utf8"));
+async function daemonStatusCmd() {
   try {
-    process.kill(pid);
-    console.log(`Daemon stopped (pid ${pid})`);
-  } catch {
-    console.log("Daemon process already dead");
+    if (!fs.existsSync(PID_FILE)) {
+      if (json) {
+        console.log(JSON.stringify({ success: false, running: false, message: "Daemon not running" }, null, 2));
+      } else {
+        console.log("Daemon not running");
+      }
+      return;
+    }
+
+    const pid = Number(fs.readFileSync(PID_FILE, "utf8"));
+    const running = isRunning(pid);
+    
+    if (json) {
+      console.log(JSON.stringify({
+        success: true,
+        running,
+        pid: running ? pid : null,
+        message: running ? `Daemon running (pid ${pid})` : "PID file exists but daemon not running"
+      }, null, 2));
+    } else {
+      if (running) {
+        console.log(`Daemon running (pid ${pid})`);
+      } else {
+        console.log("PID file exists but daemon not running");
+      }
+    }
+  } catch (err) {
+    handleError(err);
   }
-
-  fs.unlinkSync(PID_FILE);
-}
-
-async function daemonStatus() {
-  if (!fs.existsSync(PID_FILE)) {
-    console.log("Daemon not running");
-    return;
-  }
-
-  const pid = Number(fs.readFileSync(PID_FILE, "utf8"));
-  console.log(
-    isRunning(pid)
-      ? `Daemon running (pid ${pid})`
-      : "PID file exists but daemon not running"
-  );
 }
 
 /* ===================== core commands ===================== */
@@ -1218,10 +1304,12 @@ async function main() {
   if (cmd === "ping") return pingCmd();
   if (cmd === "doctor") return doctorCmd();
   if (cmd === "list-paired") return listPairedCmd();
-  if (cmd === "daemon" && rest[0] === "start") return daemonStart();
-  if (cmd === "daemon" && rest[0] === "stop") return daemonStop();
-  if (cmd === "daemon" && rest[0] === "status") return daemonStatus();
   if (cmd === "config" && rest[0] === "show") return configShowCmd();
+  if (cmd === "daemon" && rest[0] === "start") return daemonStartCmd();
+  if (cmd === "daemon" && rest[0] === "stop") return daemonStopCmd();
+  if (cmd === "daemon" && rest[0] === "status") return daemonStatusCmd();
+  if (cmd === "start-server") return daemonStartCmd();
+  if (cmd === "kill-server") return daemonStopCmd();
   if (cmd === "connect") return connectCmd();
   if (cmd === "context" && rest[0] === "list") return contextListCmd();
   if (cmd === "context" && rest[0] === "add") return contextAddCmd();
@@ -1231,11 +1319,7 @@ async function main() {
   if (cmd === "group" && rest[0] === "exec") return groupExecCmd();
   if (cmd === "inventory") return inventoryCmd();
 
-  // udb-compatible aliases
-  if (cmd === "start-server") return daemonStart();
-  if (cmd === "kill-server") return daemonStop();
-
-  console.log(`Universal Device Bridge (UDB) v0.8.4
+  console.log(`Universal Device Bridge (UDB) v0.8.5
 udb-style device access for embedded systems, MCUs, and simulators.
 
 Usage:

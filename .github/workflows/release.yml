@@ -20,6 +20,9 @@ jobs:
           - os: ubuntu-latest
             pkg_target: node18-linux-x64
             output: udb-linux-x64
+          - os: ubuntu-latest
+            pkg_target: node18-linux-arm64
+            output: udb-linux-arm64
           - os: macos-latest
             pkg_target: node18-macos-x64
             output: udb-macos-x64
@@ -43,16 +46,20 @@ jobs:
         run: npm ci
 
       - name: Build CLI bundle
-        run: npm run build
+        run: node scripts/build-cli.js
 
       - name: Build binary
-        run: npx pkg cli/cli-bundle.cjs --targets ${{ matrix.pkg_target }} --output dist/${{ matrix.output }}
+        run: npx pkg cli/udb.cjs --targets ${{ matrix.pkg_target }} --output dist/${{ matrix.output }} --compress GZip
 
       - name: Generate SHA256
         shell: bash
         run: |
           cd dist
-          sha256sum ${{ matrix.output }} > ${{ matrix.output }}.sha256
+          if command -v sha256sum &> /dev/null; then
+            sha256sum ${{ matrix.output }} > ${{ matrix.output }}.sha256
+          else
+            shasum -a 256 ${{ matrix.output }} | awk '{print $1 "  " $2}' > ${{ matrix.output }}.sha256
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -66,12 +73,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist
 
+      - name: Create combined SHA256SUMS
+        shell: bash
+        run: |
+          cd dist
+          sha256sum udb-* > SHA256SUMS || shasum -a 256 udb-* | awk '{print $1 "  " $2}' > SHA256SUMS
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/**/*
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}

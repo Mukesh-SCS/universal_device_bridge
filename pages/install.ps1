@@ -20,7 +20,7 @@
 
 .EXAMPLE
     # Install latest version
-    irm https://udb.pages.dev/install.ps1 | iex
+    irm https://udb-core.pages.dev/install.ps1 | iex
 
 .EXAMPLE
     # Install specific version

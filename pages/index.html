@@ -7,15 +7,27 @@
     <meta name="description" content="ADB-style device access for embedded systems, MCUs, and simulators." />
 
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
       :root {
-        --bg: #0d1117;
-        --fg: #c9d1d9;
-        --muted: #8b949e;
-        --accent: #58a6ff;
-        --accent-strong: #1f6feb;
-        --card: #161b22;
-        --border: #30363d;
-        --success: #3fb950;
+        --bg: #0a0e1a;
+        --bg-gradient: linear-gradient(135deg, #0a0e1a 0%, #1a1f35 100%);
+        --fg: #e4e7eb;
+        --muted: #9ca3af;
+        --accent: #6366f1;
+        --accent-hover: #818cf8;
+        --accent-strong: #4f46e5;
+        --accent-glow: rgba(99, 102, 241, 0.3);
+        --card: rgba(30, 41, 59, 0.6);
+        --card-hover: rgba(30, 41, 59, 0.8);
+        --border: rgba(148, 163, 184, 0.1);
+        --border-hover: rgba(148, 163, 184, 0.2);
+        --success: #10b981;
+        --success-glow: rgba(16, 185, 129, 0.2);
+        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+        --shadow-glow: 0 0 24px var(--accent-glow);
       }
 
       * {
@@ -25,8 +37,11 @@
       }
 
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         background: var(--bg);
+        background-image: 
+          radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+          radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
         color: var(--fg);
         min-height: 100vh;
         display: flex;
@@ -34,59 +49,275 @@
         justify-content: center;
         padding: 2rem;
         line-height: 1.6;
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+          radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+          radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .floating-commands {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      .command-bubble {
+        position: absolute;
+        font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace;
+        font-size: 0.85rem;
+        color: rgba(99, 102, 241, 0.4);
+        white-space: nowrap;
+        user-select: none;
+        opacity: 0;
+        will-change: transform, opacity;
+        animation: bubbleFloat 12s ease-out infinite;
+        text-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+        font-weight: 500;
+      }
+
+      @keyframes bubbleFloat {
+        0% {
+          opacity: 0;
+          transform: translateY(100vh) translateX(0) scale(0.9);
+        }
+        5% {
+          opacity: 1;
+        }
+        95% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-15vh) translateX(30px) scale(1.1);
+        }
+      }
+
+      /* Stagger animations for each command - shorter delays for multiple at once */
+      .command-bubble:nth-child(1) { 
+        left: 8%;
+        animation-delay: 0s;
+      }
+      .command-bubble:nth-child(2) { 
+        left: 18%;
+        animation-delay: 0.8s;
+      }
+      .command-bubble:nth-child(3) { 
+        left: 28%;
+        animation-delay: 1.6s;
+      }
+      .command-bubble:nth-child(4) { 
+        left: 38%;
+        animation-delay: 2.4s;
+      }
+      .command-bubble:nth-child(5) { 
+        left: 48%;
+        animation-delay: 3.2s;
+      }
+      .command-bubble:nth-child(6) { 
+        left: 58%;
+        animation-delay: 4s;
+      }
+      .command-bubble:nth-child(7) { 
+        left: 68%;
+        animation-delay: 4.8s;
+      }
+      .command-bubble:nth-child(8) { 
+        left: 78%;
+        animation-delay: 5.6s;
+      }
+      .command-bubble:nth-child(9) { 
+        left: 12%;
+        animation-delay: 6.4s;
+      }
+      .command-bubble:nth-child(10) { 
+        left: 22%;
+        animation-delay: 7.2s;
+      }
+      .command-bubble:nth-child(11) { 
+        left: 32%;
+        animation-delay: 8s;
+      }
+      .command-bubble:nth-child(12) { 
+        left: 42%;
+        animation-delay: 8.8s;
+      }
+      .command-bubble:nth-child(13) { 
+        left: 52%;
+        animation-delay: 9.6s;
+      }
+      .command-bubble:nth-child(14) { 
+        left: 62%;
+        animation-delay: 10.4s;
+      }
+      .command-bubble:nth-child(15) { 
+        left: 72%;
+        animation-delay: 11.2s;
+      }
+      .command-bubble:nth-child(16) { 
+        left: 15%;
+        animation-delay: 0.4s;
+      }
+      .command-bubble:nth-child(17) { 
+        left: 25%;
+        animation-delay: 1.2s;
+      }
+      .command-bubble:nth-child(18) { 
+        left: 35%;
+        animation-delay: 2s;
+      }
+      .command-bubble:nth-child(19) { 
+        left: 45%;
+        animation-delay: 2.8s;
+      }
+      .command-bubble:nth-child(20) { 
+        left: 55%;
+        animation-delay: 3.6s;
       }
 
       .container {
-        max-width: 720px;
+        max-width: 800px;
         width: 100%;
         text-align: center;
+        position: relative;
+        z-index: 1;
+        animation: fadeInUp 0.8s ease-out;
       }
 
-      h1 {
-        font-size: 3rem;
-        color: #fff;
-        margin-bottom: 0.25rem;
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .logo {
+        font-size: 3.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #10b981 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+        animation: gradientShift 3s ease infinite;
+        background-size: 200% 200%;
+      }
+
+      @keyframes gradientShift {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
       }
 
       .tagline {
         color: var(--muted);
-        font-size: 1.2rem;
-        margin-bottom: 2.5rem;
+        font-size: 1.25rem;
+        margin-bottom: 3rem;
+        font-weight: 400;
+        letter-spacing: -0.01em;
       }
 
       .card {
         background: var(--card);
+        backdrop-filter: blur(10px);
         border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin-bottom: 1.75rem;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
         text-align: left;
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-md);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--accent), var(--success));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .card:hover {
+        border-color: var(--border-hover);
+        background: var(--card-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .card:hover::before {
+        opacity: 1;
       }
 
       .card h2 {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.1em;
         color: var(--muted);
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .card h2::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, var(--border), transparent);
       }
 
       pre {
-        background: var(--bg);
-        border-radius: 8px;
-        padding: 1rem;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
         overflow-x: auto;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
+        position: relative;
+        transition: all 0.3s ease;
+      }
+
+      pre:hover {
+        border-color: var(--accent);
+        box-shadow: 0 0 20px var(--accent-glow);
       }
 
       code {
-        font-family: "SF Mono", "Fira Code", Consolas, monospace;
+        font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace;
         color: var(--accent);
+        font-weight: 500;
       }
 
       .buttons {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
         gap: 1rem;
         margin-bottom: 1.5rem;
       }
@@ -95,67 +326,211 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0.9rem 1.2rem;
-        border-radius: 8px;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
         font-weight: 600;
+        font-size: 0.95rem;
         text-decoration: none;
         color: #fff;
-        background: var(--accent-strong);
-        border: 1px solid var(--border);
-        transition: transform 0.05s ease, background 0.15s ease;
+        background: linear-gradient(135deg, var(--accent-strong) 0%, var(--accent) 100%);
+        border: none;
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-sm);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s ease;
+      }
+
+      .btn:hover::before {
+        left: 100%;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-glow), var(--shadow-md);
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+      }
+
+      .btn:active {
+        transform: translateY(0);
       }
 
       .btn.secondary {
         background: transparent;
         color: var(--accent);
+        border: 1px solid var(--border);
       }
 
-      .btn:hover {
-        background: var(--accent);
-        transform: translateY(-1px);
+      .btn.secondary:hover {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: var(--accent);
       }
 
       .features {
         display: grid;
-        gap: 0.6rem;
-        margin-top: 1.5rem;
+        gap: 0.75rem;
+        margin-top: 2rem;
+        padding: 1.5rem;
+        background: var(--card);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: var(--shadow-md);
       }
 
       .feature {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        font-size: 0.95rem;
+        gap: 0.75rem;
+        font-size: 1rem;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+      }
+
+      .feature:hover {
+        background: rgba(99, 102, 241, 0.05);
+        transform: translateX(4px);
       }
 
       .check {
         color: var(--success);
         font-weight: bold;
+        font-size: 1.1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        background: rgba(16, 185, 129, 0.1);
+        border-radius: 50%;
+        flex-shrink: 0;
       }
 
       .footer {
-        margin-top: 2rem;
+        margin-top: 3rem;
         display: flex;
-        gap: 1.5rem;
+        gap: 2rem;
         justify-content: center;
         flex-wrap: wrap;
         font-size: 0.95rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--border);
       }
 
       .footer a {
-        color: var(--accent);
+        color: var(--muted);
         text-decoration: none;
+        transition: all 0.2s ease;
+        position: relative;
+        padding: 0.5rem 0;
+      }
+
+      .footer a::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: var(--accent);
+        transition: width 0.3s ease;
       }
 
       .footer a:hover {
-        text-decoration: underline;
+        color: var(--accent);
+      }
+
+      .footer a:hover::after {
+        width: 100%;
+      }
+
+      @media (max-width: 640px) {
+        .logo {
+          font-size: 2.5rem;
+        }
+
+        .tagline {
+          font-size: 1.1rem;
+        }
+
+        .card {
+          padding: 1.5rem;
+        }
+
+        .buttons {
+          grid-template-columns: 1fr;
+        }
+
+        pre {
+          font-size: 0.85rem;
+          padding: 1rem;
+        }
+      }
+
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--bg);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--accent);
       }
     </style>
   </head>
 
   <body>
+    <!-- Floating CLI commands in background -->
+    <div class="floating-commands">
+      <div class="command-bubble">udb devices</div>
+      <div class="command-bubble">udb connect &lt;target&gt;</div>
+      <div class="command-bubble">udb shell</div>
+      <div class="command-bubble">udb exec "&lt;cmd&gt;"</div>
+      <div class="command-bubble">udb push &lt;src&gt; &lt;dst&gt;</div>
+      <div class="command-bubble">udb pull &lt;src&gt; &lt;dst&gt;</div>
+      <div class="command-bubble">udb status [target]</div>
+      <div class="command-bubble">udb info [target]</div>
+      <div class="command-bubble">udb ping [target]</div>
+      <div class="command-bubble">udb doctor [target]</div>
+      <div class="command-bubble">udb pair &lt;target&gt;</div>
+      <div class="command-bubble">udb unpair &lt;target&gt;</div>
+      <div class="command-bubble">udb list-paired</div>
+      <div class="command-bubble">udb context list</div>
+      <div class="command-bubble">udb context add &lt;name&gt; &lt;target&gt;</div>
+      <div class="command-bubble">udb context use &lt;name&gt;</div>
+      <div class="command-bubble">udb group list</div>
+      <div class="command-bubble">udb group add &lt;name&gt; &lt;targets...&gt;</div>
+      <div class="command-bubble">udb group exec &lt;name&gt; "&lt;cmd&gt;"</div>
+      <div class="command-bubble">udb inventory</div>
+      <div class="command-bubble">udb config show</div>
+      <div class="command-bubble">udb daemon start</div>
+      <div class="command-bubble">udb daemon stop</div>
+      <div class="command-bubble">udb daemon status</div>
+      <div class="command-bubble">udb start-server</div>
+      <div class="command-bubble">udb kill-server</div>
+    </div>
+
     <div class="container">
-      <h1>UDB Core</h1>
+      <h1 class="logo">UDB Core</h1>
       <p class="tagline">
         Universal Device Bridge — ADB-style access for embedded, MCU, and simulated devices
       </p>
